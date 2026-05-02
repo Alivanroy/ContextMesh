@@ -86,11 +86,12 @@ def default_agents() -> list[AgentSource]:
         return "claude_code_session.jsonl"
 
     def aider_fixture(task: Task) -> str:
-        # Real Aider + Ollama llama3 session captured 2026-05-02; the
-        # synthetic fixture is kept as a fallback for the failing case.
+        # Real Aider + Ollama llama3 sessions, captured 2026-05-02. The
+        # failing variant is the same setup with a misleading prompt that
+        # produced a wrong fix and a 2-failure pytest run.
         if task.expected_outcome == "passed":
             return "aider_real_llama3.md"
-        return "aider_session.md"
+        return "aider_real_llama3_failing.md"
 
     return [
         AgentSource(name="claude-code", adapter_key="claude-code",

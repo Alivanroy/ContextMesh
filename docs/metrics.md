@@ -31,6 +31,30 @@ tokens_avoided ≥ tokens_kept_compressed + tokens_kept_pinned
 There can be other sources of avoidance (e.g. distilled test output) lumped
 into `tokens_avoided` but not yet attributed to a finer bucket.
 
+### How `tokens_estimated` is populated
+
+For events recorded via `contextmesh ledger record` (manual usage),
+`tokens_estimated` is the local `cl100k_base` estimate of `context_text`.
+
+For events recorded via `contextmesh trace` (where an adapter parses an
+agent's tool-call stream), `tokens_estimated` defaults to the **real
+input volume the provider processed**:
+
+```
+tokens_estimated = tokens_provider_input + tokens_cached_read + tokens_cached_write
+```
+
+That is the raw token count the provider tokenized, not a local guess.
+This is what makes `useful_context_ratio` meaningful for traced sessions:
+the metric reports against billable provider volume, even though the
+four-column dashboard view keeps the components separate so cost can be
+weighted later.
+
+Adapters can override this by setting `tokens_estimated` explicitly on a
+particular event (the Claude Code adapter does this for its synthetic
+"distilled pytest tool_result" steps, where the credited savings live in
+`tokens_avoided` and the billed-volume column should be zero).
+
 ---
 
 ## Definitions

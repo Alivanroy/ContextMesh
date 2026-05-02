@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-02T19:06:35.509496+00:00",
+  "generated_at": "2026-05-02T20:14:26.846595+00:00",
   "tasks": [
     {
       "task_id": "reset-bug-failing",
@@ -28,7 +28,7 @@
         "task_id": "reset-bug-failing",
         "steps": 5,
         "final_outcome_class": "regressed",
-        "tokens_billed": 37,
+        "tokens_billed": 29100,
         "tokens_avoided": 20,
         "tokens_kept_compressed": 0,
         "tokens_kept_pinned": 0,
@@ -38,7 +38,7 @@
         "tokens_provider_output": 680,
         "cache_hit_rate": 0.6268,
         "useful_context_ratio": 0.0,
-        "raw_baseline_estimate": 57
+        "raw_baseline_estimate": 29120
       },
       "outcome_correctly_classified": true
     },
@@ -52,20 +52,20 @@
       "metrics": {
         "task_id": "reset-bug-failing",
         "steps": 2,
-        "final_outcome_class": "passed",
-        "tokens_billed": 11,
-        "tokens_avoided": 0,
+        "final_outcome_class": "regressed",
+        "tokens_billed": 1580,
+        "tokens_avoided": 69,
         "tokens_kept_compressed": 0,
         "tokens_kept_pinned": 0,
-        "tokens_provider_input": 5300,
+        "tokens_provider_input": 1580,
         "tokens_cached_read": 0,
         "tokens_cached_write": 0,
-        "tokens_provider_output": 344,
+        "tokens_provider_output": 180,
         "cache_hit_rate": 0.0,
-        "useful_context_ratio": 1.0,
-        "raw_baseline_estimate": 11
+        "useful_context_ratio": 0.0,
+        "raw_baseline_estimate": 1649
       },
-      "outcome_correctly_classified": false
+      "outcome_correctly_classified": true
     },
     {
       "task": {
@@ -78,7 +78,7 @@
         "task_id": "reset-bug-fixed",
         "steps": 3,
         "final_outcome_class": "passed",
-        "tokens_billed": 11,
+        "tokens_billed": 17560,
         "tokens_avoided": 0,
         "tokens_kept_compressed": 0,
         "tokens_kept_pinned": 0,
@@ -88,7 +88,7 @@
         "tokens_provider_output": 240,
         "cache_hit_rate": 0.6925,
         "useful_context_ratio": 1.0,
-        "raw_baseline_estimate": 11
+        "raw_baseline_estimate": 17560
       },
       "outcome_correctly_classified": true
     },
@@ -103,7 +103,7 @@
         "task_id": "reset-bug-fixed",
         "steps": 2,
         "final_outcome_class": "passed",
-        "tokens_billed": 37,
+        "tokens_billed": 1309,
         "tokens_avoided": 0,
         "tokens_kept_compressed": 0,
         "tokens_kept_pinned": 0,
@@ -113,7 +113,7 @@
         "tokens_provider_output": 160,
         "cache_hit_rate": 0.0,
         "useful_context_ratio": 1.0,
-        "raw_baseline_estimate": 37
+        "raw_baseline_estimate": 1309
       },
       "outcome_correctly_classified": true
     }

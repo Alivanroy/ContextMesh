@@ -13,8 +13,32 @@ spend. The repo-packing and indexing surfaces are no longer the headline;
 the ledger and `useful_context_ratio` are. See README.md and
 [docs/metrics.md](docs/metrics.md).
 
-### Fixed
-- **Aider cost-line parsing in real fixtures**: real Aider 0.86.x emits
+## v0.2.1 — 2026-05-02
+
+### Fixed (post-v0.2.0 review feedback)
+
+- **Traced sessions now bill real provider tokens** ([record_event](contextmesh/runtime/ledger.py)).
+  Before this fix, `tokens_estimated` for adapter-emitted events fell back
+  to a `cl100k_base` estimate of the tiny `context_text` (often <20 tokens
+  for a turn that processed 17k of provider input). `useful_context_ratio`
+  was effectively measuring nothing for traced sessions. Now: when any
+  provider-token field is non-zero, `tokens_estimated` defaults to the
+  sum `input + cache_read + cache_write` — the real input volume the
+  provider tokenized. Locked in by `test_traced_session_billed_tokens_use_provider_numbers`.
+- **Default benchmark harness no longer publishes a misclassified row**
+  ([benchmarks/harness.py](benchmarks/harness.py)). The previous v0.2.0
+  default paired `reset-bug-failing` (expected `regressed`) with the only
+  Aider fixture available — a passing run — producing a `✗` row in every
+  publication. Captured a real failing Aider+llama3 session
+  ([tests/fixtures/aider_real_llama3_failing.md](tests/fixtures/aider_real_llama3_failing.md))
+  and added `test_default_harness_runs_all_classify_correctly` so any
+  future fixture/expected-outcome mismatch fails CI.
+- **README quick-start now leads with `trace`**, not `ledger record` —
+  the manual-logging path is documented as a fallback under
+  `docs/architecture.md`. Roadmap line correctly notes `trace` shipped
+  in v0.2 with two adapters; v0.3 is for adapters #3 and #4.
+
+### Aider cost-line parsing in real fixtures real Aider 0.86.x emits
   the `Tokens: … sent, … received` summary inside a `> ` blockquote, and
   the per-turn variant lacks the `Cost: $…` suffix that the synthetic
   fixture had. The adapter now matches both shapes. Caught by the first

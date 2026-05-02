@@ -27,6 +27,46 @@ def test_harness_runs_all_combinations(monkeypatch):
             assert key in m
 
 
+def test_default_harness_runs_all_classify_correctly():
+    """Every default (task, agent) pair must produce the expected outcome.
+
+    A failing row in the published leaderboard would undermine the whole
+    metric, so we lock this in. If you add a new default task, add a
+    fixture for every default agent that produces the expected outcome.
+    """
+    tasks = default_tasks()
+    agents = default_agents()
+    report = run(tasks, agents)
+    misclassified = [
+        f"{r['agent']}/{r['task']['id']} got {r['metrics']['final_outcome_class']}"
+        f" (expected {r['task']['expected_outcome']})"
+        for r in report["runs"] if not r["outcome_correctly_classified"]
+    ]
+    assert not misclassified, "default harness has misclassified rows: " + "; ".join(misclassified)
+
+
+def test_traced_session_billed_tokens_use_provider_numbers():
+    """Regression: when an event carries provider-token fields, the metric
+    must bill those numbers, not a local cl100k_base estimate of the
+    tiny ``context_text``."""
+    from contextmesh.runtime.ledger import record_event
+    from contextmesh.runtime.metrics import task_metrics
+
+    record_event({
+        "task_id": "T-prov", "step": 1, "agent": "claude-code",
+        "context_text": "hi",  # ~1 local token
+        "decision": "tiny", "outcome": "ok", "outcome_class": "passed",
+        "tokens_provider_input": 5_400,
+        "tokens_cached_read": 12_160,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 240,
+    })
+    m = task_metrics("T-prov")
+    # Must bill the real provider input volume, not the cl100k_base of "hi".
+    assert m.tokens_billed == 5_400 + 12_160
+    assert m.useful_context_ratio == 1.0
+
+
 def test_harness_render_emits_leaderboard():
     tasks = default_tasks()
     agents = default_agents()

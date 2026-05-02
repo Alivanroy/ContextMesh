@@ -71,15 +71,35 @@ def record_event(event: dict) -> LedgerEntry:
     Adapters (``contextmesh/adapters/*``) emit dicts shaped like the kwargs
     of :func:`record_step` plus optional provider-token fields. This helper
     is the single entry point so the schema mapping lives in one place.
+
+    Billing-volume rule for ``tokens_estimated`` (the input to
+    ``useful_context_ratio``):
+
+      1. If the event sets ``tokens_estimated`` explicitly, honour it.
+      2. Otherwise, if any provider token field is non-zero, use the sum
+         ``input + cache_read + cache_write`` — the **real** input volume
+         the provider processed, not a local cl100k_base guess. This is
+         what makes the metric meaningful for traced sessions.
+      3. Otherwise fall back to estimating ``context_text``.
     """
     create_db_and_tables()
     refs = event.get("context_refs", []) or []
     if isinstance(refs, str):
         refs = [refs]
     context_text = event.get("context_text", "") or ""
+    provider_in = int(event.get("tokens_provider_input", 0))
+    cached_read = int(event.get("tokens_cached_read", 0))
+    cached_write = int(event.get("tokens_cached_write", 0))
+    provider_total = provider_in + cached_read + cached_write
+
     estimated = event.get("tokens_estimated")
     if estimated is None:
-        estimated = estimate_tokens(context_text) if context_text else 0
+        if provider_total > 0:
+            estimated = provider_total
+        elif context_text:
+            estimated = estimate_tokens(context_text)
+        else:
+            estimated = 0
     entry = LedgerEntry(
         task_id=event["task_id"],
         step=event["step"],
@@ -89,9 +109,9 @@ def record_event(event: dict) -> LedgerEntry:
         tokens_avoided=int(event.get("tokens_avoided", 0)),
         tokens_kept_compressed=int(event.get("tokens_kept_compressed", 0)),
         tokens_kept_pinned=int(event.get("tokens_kept_pinned", 0)),
-        tokens_provider_input=int(event.get("tokens_provider_input", 0)),
-        tokens_cached_read=int(event.get("tokens_cached_read", 0)),
-        tokens_cached_write=int(event.get("tokens_cached_write", 0)),
+        tokens_provider_input=provider_in,
+        tokens_cached_read=cached_read,
+        tokens_cached_write=cached_write,
         tokens_provider_output=int(event.get("tokens_provider_output", 0)),
         decision=str(event.get("decision", "")),
         outcome=str(event.get("outcome", "ok")),

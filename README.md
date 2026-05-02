@@ -47,20 +47,27 @@ Requires Python 3.10+.
 # 1. One-time: set up the local state directory
 contextmesh init
 
-# 2. As your agent works, log each step
-contextmesh ledger record \
-  --task-id reset-bug \
-  --step 1 \
-  --agent claude-code \
-  --decision "patched expiry comparison" \
-  --outcome-class passed \
-  --tokens-kept-compressed 1200 \
-  --tokens-kept-pinned 480 \
-  --context-text "$(cat CONTEXT_PACKET.md)"
+# 2. Try it on a captured session (no auth required)
+contextmesh trace --task-id smoke --silent --from-file \
+    tests/fixtures/claude_code_fixed_session.jsonl -- noop
 
-# 3. See where the tokens went
+# 3. Or wrap a real Claude Code run end-to-end
+contextmesh trace --task-id reset-bug --agent claude-code -- \
+    claude -p "fix the failing test" --output-format stream-json --verbose
+
+# 4. Or wrap an Aider session via its chat history
+aider --model claude-sonnet ...
+contextmesh trace --task-id reset-bug --agent aider --silent \
+    --from-file .aider.chat.history.md -- noop
+
+# 5. See where the tokens went
 contextmesh dashboard
+contextmesh metrics --task-id reset-bug --json
 ```
+
+For workflows where you'd rather log each agent step manually, see
+[`contextmesh ledger record`](docs/architecture.md) — the same ledger
+schema, just populated by hand.
 
 The dashboard shows four panels:
 
@@ -126,15 +133,17 @@ but they're not the headline anymore. The headline is what you can
 
 ## Roadmap
 
-- **v0.2 (current)** — observability layer. Ledger, metrics, dashboard,
-  delta cache, critical-path focus.
-- **v0.3** — `contextmesh trace -- <agent ...>`: wrap any agent CLI
-  (Claude Code, Aider, Codex CLI, OpenCode, Cursor) and populate the
-  ledger automatically by parsing its tool-call stream.
-- **v0.4** — published benchmark: useful-context ratio across 5 agents on
-  20 tasks, including SWE-bench Lite cases.
+- **v0.2 (current)** — observability layer with two real adapters
+  (Claude Code stream-json, Aider chat history). Ledger, metrics,
+  dashboard, delta cache, critical-path focus, `contextmesh trace`.
+- **v0.3** — adapters #3 and #4: Codex CLI / OpenCode (subprocess +
+  stream events) and Cursor (local SQLite conversation log).
+- **v0.4** — published benchmark: useful-context ratio across 4+ agents
+  on 10–20 tasks, including SWE-bench Lite cases. Real cache numbers,
+  no synthetic fixtures in the headline rows.
 - **v0.5** — packet schema as a portable spec (JSON Schema + Protobuf)
-  so other tools can write into the same ledger format.
+  so other tools can write into the same ledger format. OpenTelemetry
+  GenAI export path.
 
 The earlier `plan.md` listed MCP proxy, RAG optimization, and a security
 layer. Those are deferred indefinitely — Anthropic's MCP Tool Search
