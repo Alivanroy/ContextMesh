@@ -1,7 +1,7 @@
 """Markdown rendering of context packets, suitable for pasting into agents."""
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 
 def _line(packet: dict) -> str:

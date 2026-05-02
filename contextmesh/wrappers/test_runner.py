@@ -7,7 +7,7 @@ so an agent never has to ingest raw logs again.
 from __future__ import annotations
 
 import re
-from typing import Iterable, List
+from collections.abc import Iterable
 
 from contextmesh.packets.schema import CommandResultPacket, TestFailurePacket
 
@@ -16,7 +16,7 @@ JEST_FAIL = re.compile(r"^\s*✕\s+(.*?)(?:\s+\(\d+\s*ms\))?$")
 JEST_AT = re.compile(r"^\s*at\s+.*?\(([^:]+):(\d+):(\d+)\)")
 
 
-def _build_pytest_failure(test_name: str, trace: List[str]) -> TestFailurePacket:
+def _build_pytest_failure(test_name: str, trace: list[str]) -> TestFailurePacket:
     file_path = "unknown"
     line_num: int | None = None
     assertion: str | None = None
@@ -159,7 +159,7 @@ def _detect_runner(command_parts: Iterable[str]) -> str:
 
 
 def distill_command_output(
-    command_parts: List[str],
+    command_parts: list[str],
     exit_code: int,
     output: str,
 ) -> CommandResultPacket:

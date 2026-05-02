@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from typing import List
 
 from sqlmodel import select
 
@@ -31,7 +30,7 @@ def record_step(
     task_id: str,
     step: int,
     agent: str,
-    context_refs: List[str],
+    context_refs: list[str],
     context_text: str,
     decision: str,
     outcome: str,
@@ -105,7 +104,7 @@ def record_event(event: dict) -> LedgerEntry:
         return entry
 
 
-def get_ledger(limit: int = 10, *, task_id: str | None = None) -> List[LedgerEntry]:
+def get_ledger(limit: int = 10, *, task_id: str | None = None) -> list[LedgerEntry]:
     create_db_and_tables()
     with get_session() as session:
         stmt = select(LedgerEntry).order_by(LedgerEntry.id.desc())

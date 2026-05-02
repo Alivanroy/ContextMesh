@@ -13,7 +13,7 @@ hashes the compressor should leave alone.
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 from contextmesh.agent.tools import expand_symbol
 from contextmesh.indexer.repo_indexer import find_symbol, list_symbols

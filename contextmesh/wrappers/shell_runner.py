@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import os
 import subprocess
-from typing import List, Tuple
 
 
-def run_shell_command(command: List[str], *, cwd: str | None = None, timeout: int | None = None) -> Tuple[int, str]:
+def run_shell_command(command: list[str], *, cwd: str | None = None, timeout: int | None = None) -> tuple[int, str]:
     """Run *command* and return ``(exit_code, combined_output)``."""
     try:
         result = subprocess.run(

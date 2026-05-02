@@ -1,8 +1,7 @@
 import subprocess
-import requests
 import time
-import json
-import sys
+
+import requests
 
 MODEL = "llama3:latest"
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -27,7 +26,7 @@ def main():
     print("===============================================\n")
 
     # 1. Gather Raw Context (Baseline)
-    with open("demo/src/auth/reset.py", "r") as f:
+    with open("demo/src/auth/reset.py") as f:
         raw_source = f.read()
         
     raw_test_run = subprocess.run(

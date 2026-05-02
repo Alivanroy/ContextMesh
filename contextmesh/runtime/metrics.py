@@ -22,8 +22,8 @@ penalised. The metric rewards *finishing*, not *trying*.
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from sqlmodel import select
 

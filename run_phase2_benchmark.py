@@ -1,7 +1,9 @@
-import time
-import subprocess
 import os
+import subprocess
+import time
+
 import tiktoken
+
 
 def count_tokens(text: str) -> int:
     enc = tiktoken.get_encoding("cl100k_base")
@@ -14,7 +16,7 @@ def get_directory_tokens(path: str) -> int:
             if file.endswith('.py'):
                 filepath = os.path.join(root, file)
                 try:
-                    with open(filepath, 'r') as f:
+                    with open(filepath) as f:
                         total += count_tokens(f.read())
                 except Exception:
                     pass

@@ -1,5 +1,6 @@
 import time
 
+
 class PasswordResetToken:
     def __init__(self, token: str, expires_at: float):
         self.token = token

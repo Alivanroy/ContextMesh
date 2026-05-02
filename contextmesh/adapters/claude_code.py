@@ -22,7 +22,6 @@ from contextmesh.adapters.base import Adapter
 from contextmesh.runtime.ledger import estimate_tokens
 from contextmesh.wrappers.test_runner import distill_command_output
 
-
 _PYTEST_MARKERS = ("test session starts", "FAILED ", "PASSED ", "passed in", "failed in")
 
 

@@ -8,11 +8,10 @@ references.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from contextmesh.runtime.ledger import estimate_tokens
-
 
 PRIORITY = {
     "task": 0,

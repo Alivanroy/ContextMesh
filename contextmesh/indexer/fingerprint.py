@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from contextmesh.config import DEFAULT_IGNORES
 
@@ -53,7 +53,7 @@ def index_file(filepath: str | Path) -> dict:
     path = Path(filepath)
     stat = path.stat()
     try:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(path, encoding="utf-8", errors="ignore") as f:
             line_count = sum(1 for _ in f)
     except OSError:
         line_count = 0

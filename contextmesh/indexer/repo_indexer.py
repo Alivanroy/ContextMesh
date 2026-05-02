@@ -8,16 +8,15 @@ deleted on disk.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from sqlmodel import select
 
 from contextmesh.config import load_config, relpath
 from contextmesh.indexer.fingerprint import (
     detect_language,
-    get_file_hash,
     index_file,
     walk_repo,
 )

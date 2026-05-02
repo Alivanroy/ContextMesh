@@ -23,7 +23,6 @@ from contextmesh.runtime.metrics import (
     global_metrics,
 )
 
-
 _OUTCOME_COLORS = {
     "passed": "green",
     "unchanged": "yellow",
@@ -138,7 +137,6 @@ def render_timeline(console: Console, limit: int = 25) -> None:
     table.add_column("                 ", style="dim")
 
     for e in entries:
-        total = e.tokens_estimated + e.tokens_avoided
         billed_bar = _bar(e.tokens_estimated, max_total, width=8)
         avoided_bar = _bar(e.tokens_avoided, max_total, width=8)
         color = _OUTCOME_COLORS.get(e.outcome_class, "white")

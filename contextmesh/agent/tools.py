@@ -2,14 +2,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from contextmesh.config import load_config
 from contextmesh.indexer.repo_indexer import find_symbol
 from contextmesh.indexer.tree_sitter_parser import parse_python_source
 
 
-def _resolve(filepath: str | Path) -> Optional[Path]:
+def _resolve(filepath: str | Path) -> Path | None:
     """Resolve *filepath* to an absolute, existing path.
 
     Tries (in order):
@@ -37,8 +36,8 @@ def expand_symbol(
     filepath: str,
     symbol_name: str,
     *,
-    parent: Optional[str] = None,
-) -> Optional[str]:
+    parent: str | None = None,
+) -> str | None:
     """Return the source body for *symbol_name* in *filepath*.
 
     *filepath* may be absolute, cwd-relative, or project-relative
@@ -67,7 +66,7 @@ def expand_symbol(
     return "\n".join(lines[sym.start_line - 1:sym.end_line])
 
 
-def expand_symbol_indexed(name: str, *, file_path: str | None = None) -> Optional[str]:
+def expand_symbol_indexed(name: str, *, file_path: str | None = None) -> str | None:
     """Expand a symbol via the persisted index. Disambiguates by file path."""
     matches = find_symbol(name, file_path=file_path)
     if not matches:

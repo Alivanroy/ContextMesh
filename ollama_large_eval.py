@@ -1,8 +1,9 @@
-import requests
 import time
-import os
-from contextmesh.packets.generator import generate_symbol_packets
+
+import requests
 import tiktoken
+
+from contextmesh.packets.generator import generate_symbol_packets
 
 MODEL = "llama3:latest"
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -46,7 +47,7 @@ def main():
     
     raw_source = ""
     for tf in target_files:
-        with open(tf, "r") as f:
+        with open(tf) as f:
             raw_source += f"--- FILE: {tf} ---\n{f.read()}\n"
             
     raw_tokens = count_tokens(raw_source)

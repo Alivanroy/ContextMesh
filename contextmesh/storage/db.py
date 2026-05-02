@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlmodel import Field, Session, SQLModel, create_engine
 
@@ -51,7 +50,7 @@ def get_session() -> Session:
 class IndexedFile(SQLModel, table=True):
     __tablename__ = "indexed_file"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     path: str = Field(index=True, unique=True)
     language: str
     size: int
@@ -64,22 +63,22 @@ class IndexedFile(SQLModel, table=True):
 class IndexedSymbol(SQLModel, table=True):
     __tablename__ = "indexed_symbol"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     file_path: str = Field(index=True)
     name: str = Field(index=True)
-    parent: Optional[str] = None
+    parent: str | None = None
     symbol_type: str
     signature: str
     start_line: int
     end_line: int
-    docstring: Optional[str] = None
+    docstring: str | None = None
     body_hash: str = Field(index=True)
 
 
 class LedgerEntry(SQLModel, table=True):
     __tablename__ = "ledger_entry"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     task_id: str = Field(index=True)
     step: int
     agent: str
@@ -108,7 +107,7 @@ class SeenPacket(SQLModel, table=True):
     """
     __tablename__ = "seen_packet"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     task_id: str = Field(index=True)
     packet_hash: str = Field(index=True)
     packet_type: str

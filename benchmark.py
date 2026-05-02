@@ -1,9 +1,10 @@
 import subprocess
+
 import tiktoken
-import json
-import os
+
 from contextmesh.packets.generator import generate_symbol_packets
 from contextmesh.wrappers.test_runner import distill_command_output
+
 
 def count_tokens(text: str) -> int:
     enc = tiktoken.get_encoding("cl100k_base")
@@ -14,7 +15,7 @@ def main():
     
     # 1. Compare Source Code Tokens vs Symbol Packets
     target_file = "contextmesh/indexer/tree_sitter_parser.py"
-    with open(target_file, 'r') as f:
+    with open(target_file) as f:
         raw_source = f.read()
         
     raw_source_tokens = count_tokens(raw_source)
@@ -48,7 +49,7 @@ def main():
         packet = distill_command_output(["pytest", "tests/test_indexer.py"], result_raw.returncode, raw_pytest_output)
         optimized_pytest_tokens = count_tokens(packet.model_dump_json())
         
-        print(f"--- Test Failure Output Optimization ---")
+        print("--- Test Failure Output Optimization ---")
         print(f"Raw Pytest Output Tokens: {raw_pytest_tokens}")
         print(f"ContextMesh Packet Tokens: {optimized_pytest_tokens}")
         print(f"Token Reduction:           {raw_pytest_tokens - optimized_pytest_tokens} tokens ({((raw_pytest_tokens - optimized_pytest_tokens)/raw_pytest_tokens)*100:.1f}%)\n")

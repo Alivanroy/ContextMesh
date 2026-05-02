@@ -14,7 +14,6 @@ from contextmesh.packets.schema import (
     SymbolPacket,
 )
 
-
 KNOWN_FRAMEWORKS = {
     "pytest.ini": "pytest",
     "pyproject.toml": "python",

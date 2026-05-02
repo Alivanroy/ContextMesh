@@ -7,13 +7,12 @@ lives in the ``seen_packet`` table so the savings persist across CLI runs.
 """
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from sqlmodel import select
 
-from contextmesh.packets.schema import SymbolPacket, SymbolRefPacket
+from contextmesh.packets.schema import SymbolRefPacket
 from contextmesh.storage.db import SeenPacket, create_db_and_tables, get_session
-
 
 COMPRESSIBLE_TYPES = {"symbol", "file_summary"}
 

@@ -28,7 +28,6 @@ from contextmesh.adapters.claude_code import _classify_pytest_outcome, _looks_li
 from contextmesh.runtime.ledger import estimate_tokens
 from contextmesh.wrappers.test_runner import distill_command_output
 
-
 _COST_LINE = re.compile(
     r"Tokens:\s*([\d.,]+\s*[kKmM]?)\s*sent,\s*([\d.,]+\s*[kKmM]?)\s*received\.\s*"
     r"Cost:\s*\$([\d.,]+)",

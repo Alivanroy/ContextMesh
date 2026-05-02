@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 import typer
 from rich.console import Console
@@ -79,7 +78,7 @@ def packet(path: str = typer.Argument(..., help="File to generate packets for"))
         console.print(generate_file_summary(path).model_dump_json())
     except Exception as exc:
         console.print(f"[red]error generating file_summary for {path}: {exc}[/red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
     for sp in generate_symbol_packets(path):
         console.print(sp.model_dump_json())
@@ -87,9 +86,9 @@ def packet(path: str = typer.Argument(..., help="File to generate packets for"))
 
 @app.command(name="run")
 def run_command(
-    command: List[str] = typer.Argument(..., help="Command to run and distill"),
+    command: list[str] = typer.Argument(..., help="Command to run and distill"),
     raw: bool = typer.Option(False, "--raw", help="Also print raw output"),
-    timeout: Optional[int] = typer.Option(None, "--timeout", help="Seconds before killing"),
+    timeout: int | None = typer.Option(None, "--timeout", help="Seconds before killing"),
 ):
     """Run a shell command and emit a compressed CommandResultPacket."""
     from contextmesh.wrappers.shell_runner import run_shell_command
@@ -109,11 +108,11 @@ def export_context(
     task: str = typer.Option(..., "--task", help="Task description"),
     path: str = typer.Option(".", "--path", help="Path to scan"),
     format: str = typer.Option("markdown", "--format", help="markdown | jsonl"),
-    out: Optional[str] = typer.Option(None, "--out", help="Write to file instead of stdout"),
-    budget: Optional[int] = typer.Option(None, "--budget", help="Cap output to N estimated tokens"),
+    out: str | None = typer.Option(None, "--out", help="Write to file instead of stdout"),
+    budget: int | None = typer.Option(None, "--budget", help="Cap output to N estimated tokens"),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip delta compression"),
     task_id: str = typer.Option("default", "--task-id", help="Task id for delta cache"),
-    failures: Optional[str] = typer.Option(
+    failures: str | None = typer.Option(
         None,
         "--failures",
         help="JSONL file containing test_failure or command_result packets; "
@@ -190,7 +189,7 @@ def export_context(
 def expand_cmd(
     file: str = typer.Argument(..., help="File path"),
     symbol: str = typer.Argument(..., help="Symbol name"),
-    parent: Optional[str] = typer.Option(None, "--parent", help="Disambiguate by parent class"),
+    parent: str | None = typer.Option(None, "--parent", help="Disambiguate by parent class"),
 ):
     """Expand a symbol's full body. The agent calls this only when needed."""
     from contextmesh.agent.tools import expand_symbol
@@ -209,7 +208,7 @@ app.add_typer(ledger_app, name="ledger")
 @ledger_app.command("show")
 def ledger_show(
     limit: int = typer.Option(10, help="How many entries"),
-    task_id: Optional[str] = typer.Option(None, help="Filter by task id"),
+    task_id: str | None = typer.Option(None, help="Filter by task id"),
 ):
     """Show recent ledger entries."""
     from contextmesh.runtime.ledger import get_ledger
@@ -251,7 +250,7 @@ def ledger_record(
         "--outcome-class",
         help="passed | unchanged | regressed | aborted | unknown",
     ),
-    refs: List[str] = typer.Option([], "--ref", help="Repeatable evidence reference"),
+    refs: list[str] = typer.Option([], "--ref", help="Repeatable evidence reference"),
     context_text: str = typer.Option("", "--context-text"),
     tokens_avoided: int = typer.Option(0, "--tokens-avoided"),
     tokens_kept_compressed: int = typer.Option(0, "--tokens-kept-compressed"),
@@ -289,11 +288,11 @@ def dashboard():
 
 @app.command(name="trace")
 def trace_cmd(
-    command: List[str] = typer.Argument(..., help="Agent command to wrap (e.g. claude -p ...)"),
+    command: list[str] = typer.Argument(..., help="Agent command to wrap (e.g. claude -p ...)"),
     task_id: str = typer.Option(..., "--task-id", help="Task id to attach this run to"),
     agent: str = typer.Option("claude-code", "--agent", help="Adapter name"),
     silent: bool = typer.Option(False, "--silent", help="Suppress agent stdout passthrough"),
-    from_file: Optional[str] = typer.Option(
+    from_file: str | None = typer.Option(
         None,
         "--from-file",
         help="Replay agent stream-json from a file instead of spawning a subprocess",
@@ -315,7 +314,7 @@ def trace_cmd(
         adapter_cls = get_adapter(agent)
     except KeyError as exc:
         console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from exc
 
     adapter = adapter_cls(task_id=task_id, agent=agent)
     recorded = 0
@@ -365,7 +364,7 @@ def trace_cmd(
 
 @app.command(name="metrics")
 def metrics_cmd(
-    task_id: Optional[str] = typer.Option(None, "--task-id", help="Single task; default: aggregate"),
+    task_id: str | None = typer.Option(None, "--task-id", help="Single task; default: aggregate"),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON"),
 ):
     """Print useful_context_ratio and supporting metrics."""
@@ -416,7 +415,7 @@ def waste_cmd(
 
 
 @app.command(name="reset-cache")
-def reset_cache(task_id: Optional[str] = typer.Option(None, "--task-id")):
+def reset_cache(task_id: str | None = typer.Option(None, "--task-id")):
     """Forget which packets were already shown to the agent."""
     from contextmesh.packets.compressor import reset_seen
 

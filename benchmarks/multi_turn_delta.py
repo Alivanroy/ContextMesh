@@ -9,7 +9,6 @@ Prints tokens spent per turn and the cumulative savings.
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import sys

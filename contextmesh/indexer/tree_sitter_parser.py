@@ -5,8 +5,6 @@ etc. is a matter of adding their grammars and a small ``walk`` per language.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 import tree_sitter
 import tree_sitter_python
 
@@ -27,7 +25,7 @@ def _end_line(node: tree_sitter.Node) -> int:
     return max(node.start_point.row + 1, line)
 
 
-def _docstring(node: tree_sitter.Node) -> Optional[str]:
+def _docstring(node: tree_sitter.Node) -> str | None:
     for child in node.children:
         if child.type != "block":
             continue
@@ -41,7 +39,7 @@ def _docstring(node: tree_sitter.Node) -> Optional[str]:
     return None
 
 
-def _import_module(node: tree_sitter.Node) -> Optional[str]:
+def _import_module(node: tree_sitter.Node) -> str | None:
     """Best-effort module-name extraction for import statements."""
     if node.type == "import_from_statement":
         mod = node.child_by_field_name("module_name")
@@ -65,7 +63,7 @@ def parse_python_source(source_code: bytes) -> dict:
     symbols: list[ExtractedSymbol] = []
     imports: list[ExtractedImport] = []
 
-    def walk(node: tree_sitter.Node, parent_name: Optional[str] = None) -> None:
+    def walk(node: tree_sitter.Node, parent_name: str | None = None) -> None:
         if node.type in ("import_statement", "import_from_statement"):
             imports.append(ExtractedImport(
                 statement=node.text.decode("utf-8", errors="replace"),
