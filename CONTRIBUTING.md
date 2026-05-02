@@ -28,6 +28,29 @@ contextmesh/
   agent/       tools an agent can call (`expand_symbol`, ...)
 ```
 
+## Adding a new agent adapter
+
+The hottest gap. v0.2 ships Claude Code (`stream-json`) and Aider
+(`.aider.chat.history.md`); the next ones to wire are:
+
+- **Codex CLI** — has a streaming JSON event format similar to Claude
+  Code. Subprocess + line-fed adapter.
+- **OpenCode** — also stream-based, has tool-call envelopes. Same template.
+- **Cursor** — local SQLite conversation log; the adapter polls or
+  diffs the file rather than reading from a subprocess.
+
+Recipe:
+
+1. Drop a module under `contextmesh/adapters/<name>.py` subclassing
+   `Adapter` with a stateful `feed(line) → list[event_dict]`.
+2. Capture a real session as a fixture under `tests/fixtures/`. Synthetic
+   fixtures are *only* OK as fallbacks; the headline tests should
+   verify against captured-from-the-wild output.
+3. Register it in `contextmesh/adapters/__init__.py`.
+4. Mirror `tests/test_adapter_claude_code.py` for tests.
+
+Targeting ~150 LoC of adapter + ~80 LoC of tests + 1 fixture file.
+
 ## Adding a tree-sitter language
 
 1. `pip install tree-sitter-<lang>`.

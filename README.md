@@ -14,7 +14,8 @@ matters most:
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
-[![tests: 63](https://img.shields.io/badge/tests-63%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
+[![tests: 68](https://img.shields.io/badge/tests-68%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
+[![release: v0.2.2](https://img.shields.io/badge/release-v0.2.2-blue.svg)](https://github.com/Alivanroy/ContextMesh/releases/latest)
 
 ---
 
@@ -172,13 +173,21 @@ Drop-in guides under [`docs/integrations/`](docs/integrations/):
 
 ## Contributing
 
-Pull requests welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). The fastest
-ways to help right now:
+Pull requests welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). v0.2 already
+ships adapters for Claude Code (`stream-json`) and Aider
+(`.aider.chat.history.md`). The fastest ways to help right now:
 
-1. **Wire a real agent into `contextmesh trace`.** The v0.3 work above —
-   one adapter per agent, ~150 LoC each.
-2. **Add a tree-sitter language** (TS / Go / Rust) to the indexer.
-3. **Run the metric on your repo** and open an issue with a screenshot.
+1. **Add the next adapter** — Codex CLI, OpenCode, or Cursor's local
+   conversation log. The base ABC is ~30 LoC, the existing concrete
+   adapters are ~150 LoC each, and there's a fixture-based test pattern
+   to copy in `tests/test_adapter_*.py`.
+2. **Add a tree-sitter language** (TS / Go / Rust) to the indexer so the
+   `expand`/focus path works on polyglot repos.
+3. **Run `contextmesh trace` against your real workflow** and open an
+   issue with a screenshot of the dashboard or a failing-trace bug.
+4. **Cost-weighted metrics**: token volume is one axis; provider-priced
+   `$/passed-task` is the other. The four-column ledger already has
+   what we need — see issue tracker for the design draft.
 
 ## License
 

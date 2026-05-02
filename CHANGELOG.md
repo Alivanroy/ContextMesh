@@ -13,6 +13,27 @@ spend. The repo-packing and indexing surfaces are no longer the headline;
 the ledger and `useful_context_ratio` are. See README.md and
 [docs/metrics.md](docs/metrics.md).
 
+## v0.2.2 — 2026-05-02
+
+### Fixed (post-v0.2.1 review feedback)
+
+- **Package metadata version drift**: `pyproject.toml` still said
+  `version = "0.1.0"` after v0.2.0 and v0.2.1 were tagged. `pip install
+  -e .` reported the wrong version, and any future PyPI / release
+  automation would publish under the wrong name. Bumped to `0.2.2`.
+- **Single source of truth**: added `contextmesh.__version__` at the
+  package root and a regression test (`tests/test_version.py`) that:
+  (a) asserts `__version__ == pyproject.toml`,
+  (b) asserts the installed version matches the git tag at HEAD when
+  one exists.
+  Future drift fails CI loudly instead of shipping silently.
+- **README test-count badge**: was stuck at `tests: 63` after v0.2.0
+  added 16 more. Now reads `68 passing` and tracks the latest release.
+- **Contributing section**: redirected from "wire a real agent into
+  `contextmesh trace`" (already done for Claude Code + Aider) to the
+  three actually-wanted next adapters: Codex CLI, OpenCode, Cursor.
+  CONTRIBUTING.md now has a per-adapter recipe (~150 LoC each).
+
 ## v0.2.1 — 2026-05-02
 
 ### Fixed (post-v0.2.0 review feedback)
