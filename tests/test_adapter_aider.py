@@ -75,3 +75,24 @@ def test_adapter_registry_exposes_aider():
 
     cls = get_adapter("aider")
     assert cls.__name__ == "AiderAdapter"
+
+
+def test_real_aider_session_with_blockquoted_cost_line():
+    """Regression: real Aider emits ``> Tokens: …`` inside a blockquote, not
+    as a plain line. The synthetic fixture had it un-quoted; the real one
+    surfaced the bug."""
+    fixture = Path(__file__).parent / "fixtures" / "aider_real_llama3.md"
+    if not fixture.exists():
+        return  # fixture optional
+    adapter = AiderAdapter("real-aider", agent="aider")
+    events = _drive(adapter, fixture.read_text())
+
+    assert len(events) >= 1
+    edit_event = events[0]
+    # Real run: "Tokens: 989 sent, 136 received." in a > blockquote
+    assert edit_event["tokens_provider_input"] >= 800
+    assert edit_event["tokens_provider_output"] >= 100
+    # Final pytest passed → outcome auto-classified
+    final = events[-1]
+    if "passed" in fixture.read_text().lower():
+        assert final["outcome_class"] == "passed"

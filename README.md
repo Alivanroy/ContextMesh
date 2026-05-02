@@ -10,9 +10,11 @@ matters most:
 > **`useful_context_ratio`** — the fraction of tokens you spent on tasks
 > that actually finished.
 
+[![CI](https://github.com/Alivanroy/ContextMesh/actions/workflows/ci.yml/badge.svg)](https://github.com/Alivanroy/ContextMesh/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
+[![tests: 63](https://img.shields.io/badge/tests-63%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
 
 ---
 

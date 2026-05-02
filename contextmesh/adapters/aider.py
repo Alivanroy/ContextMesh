@@ -29,8 +29,8 @@ from contextmesh.runtime.ledger import estimate_tokens
 from contextmesh.wrappers.test_runner import distill_command_output
 
 _COST_LINE = re.compile(
-    r"Tokens:\s*([\d.,]+\s*[kKmM]?)\s*sent,\s*([\d.,]+\s*[kKmM]?)\s*received\.\s*"
-    r"Cost:\s*\$([\d.,]+)",
+    r"Tokens:\s*([\d.,]+\s*[kKmM]?)\s*sent,\s*([\d.,]+\s*[kKmM]?)\s*received\."
+    r"(?:\s*Cost:\s*\$([\d.,]+))?",  # Cost: only present in summary lines, not per-turn
 )
 _USER_PREFIX = "####"
 
@@ -73,7 +73,9 @@ class AiderAdapter(Adapter):
         if self._current is None:
             return []
 
-        # Tool / system blockquotes
+        # Tool / system blockquotes — Aider emits both pytest output AND the
+        # ``Tokens: … sent, … received`` summary as ``> `` blockquotes, so we
+        # have to check both inside and outside.
         if stripped.startswith("> "):
             content = stripped[2:]
             self._buf.append(content)
@@ -81,20 +83,28 @@ class AiderAdapter(Adapter):
                 cls = _classify_pytest_outcome(content)
                 if cls is not None:
                     self._last_pytest_outcome = cls
+            self._capture_cost_line(content)
             return []
 
-        # Cost summary anywhere inside the turn body.
-        m = _COST_LINE.search(stripped)
-        if m and self._current is not None:
-            self._current["tokens_sent"] = _parse_count(m.group(1))
-            self._current["tokens_received"] = _parse_count(m.group(2))
-            try:
-                self._current["cost_usd"] = float(m.group(3).replace(",", ""))
-            except ValueError:
-                self._current["cost_usd"] = 0.0
-
+        # Cost summary anywhere else inside the turn body.
+        self._capture_cost_line(stripped)
         self._buf.append(stripped)
         return []
+
+    def _capture_cost_line(self, text: str) -> None:
+        if self._current is None:
+            return
+        m = _COST_LINE.search(text)
+        if not m:
+            return
+        self._current["tokens_sent"] = _parse_count(m.group(1))
+        self._current["tokens_received"] = _parse_count(m.group(2))
+        cost = m.group(3)
+        if cost:
+            try:
+                self._current["cost_usd"] = float(cost.replace(",", ""))
+            except ValueError:
+                self._current["cost_usd"] = 0.0
 
     def _flush_turn(self) -> list[dict]:
         if self._current is None:

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-02T11:25:45.823518+00:00",
+  "generated_at": "2026-05-02T19:06:35.509496+00:00",
   "tasks": [
     {
       "task_id": "reset-bug-failing",
@@ -103,17 +103,17 @@
         "task_id": "reset-bug-fixed",
         "steps": 2,
         "final_outcome_class": "passed",
-        "tokens_billed": 11,
+        "tokens_billed": 37,
         "tokens_avoided": 0,
         "tokens_kept_compressed": 0,
         "tokens_kept_pinned": 0,
-        "tokens_provider_input": 5300,
+        "tokens_provider_input": 1309,
         "tokens_cached_read": 0,
         "tokens_cached_write": 0,
-        "tokens_provider_output": 344,
+        "tokens_provider_output": 160,
         "cache_hit_rate": 0.0,
         "useful_context_ratio": 1.0,
-        "raw_baseline_estimate": 11
+        "raw_baseline_estimate": 37
       },
       "outcome_correctly_classified": true
     }

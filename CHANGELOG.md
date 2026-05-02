@@ -14,6 +14,11 @@ the ledger and `useful_context_ratio` are. See README.md and
 [docs/metrics.md](docs/metrics.md).
 
 ### Fixed
+- **Aider cost-line parsing in real fixtures**: real Aider 0.86.x emits
+  the `Tokens: … sent, … received` summary inside a `> ` blockquote, and
+  the per-turn variant lacks the `Cost: $…` suffix that the synthetic
+  fixture had. The adapter now matches both shapes. Caught by the first
+  real Ollama-driven Aider session (`tests/fixtures/aider_real_llama3.md`).
 - **`expand_symbol` cwd dependency** (caught by Test 4 in the 2026-05-02
   real-world run): when the consumer cwd was outside the project root, the
   function's `os.path.exists()` check returned `False` for project-relative
