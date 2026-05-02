@@ -1,0 +1,42 @@
+# ContextMesh state
+.contextmesh/
+contextmesh.db
+contextmesh.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Demo / benchmarks artefacts
+demo/raw_output.txt
+demo/mesh_output.txt
+demo/CONTEXT_PACKET.md
+benchmarks/requests/
+
+# Misc
+*.log

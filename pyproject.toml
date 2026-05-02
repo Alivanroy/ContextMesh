@@ -1,0 +1,62 @@
+[tool.poetry]
+name = "contextmesh"
+version = "0.1.0"
+description = "The context optimization layer for AI coding agents."
+authors = ["Ali Korsi <ali.korsi@korit.org>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/Alivanroy/ContextMesh"
+repository = "https://github.com/Alivanroy/ContextMesh"
+documentation = "https://github.com/Alivanroy/ContextMesh#readme"
+keywords = ["llm", "agents", "context", "tokens", "rag", "claude", "codex", "cursor"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Code Generators",
+]
+packages = [{ include = "contextmesh" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+typer = ">=0.9,<1.0"
+rich = ">=13.0,<14.0"
+pydantic = ">=2.0,<3.0"
+sqlmodel = ">=0.0.14"
+tree-sitter = ">=0.21,<1.0"
+tree-sitter-python = ">=0.21,<1.0"
+tiktoken = ">=0.5,<1.0"
+requests = ">=2.31,<3.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.4"
+pytest-cov = ">=4.0"
+ruff = ">=0.5"
+
+[tool.poetry.scripts]
+contextmesh = "contextmesh.cli.main:run"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "F401"]

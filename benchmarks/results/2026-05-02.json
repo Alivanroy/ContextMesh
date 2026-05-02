@@ -1,0 +1,121 @@
+{
+  "generated_at": "2026-05-02T11:25:45.823518+00:00",
+  "tasks": [
+    {
+      "task_id": "reset-bug-failing",
+      "description": "Diagnose the verify_reset_token failure (test still failing)",
+      "expected_outcome": "regressed"
+    },
+    {
+      "task_id": "reset-bug-fixed",
+      "description": "Patch verify_reset_token comparison; verify tests pass",
+      "expected_outcome": "passed"
+    }
+  ],
+  "agents": [
+    "claude-code",
+    "aider"
+  ],
+  "runs": [
+    {
+      "task": {
+        "id": "reset-bug-failing",
+        "description": "Diagnose the verify_reset_token failure (test still failing)",
+        "expected_outcome": "regressed"
+      },
+      "agent": "claude-code",
+      "metrics": {
+        "task_id": "reset-bug-failing",
+        "steps": 5,
+        "final_outcome_class": "regressed",
+        "tokens_billed": 37,
+        "tokens_avoided": 20,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 7260,
+        "tokens_cached_read": 18240,
+        "tokens_cached_write": 3600,
+        "tokens_provider_output": 680,
+        "cache_hit_rate": 0.6268,
+        "useful_context_ratio": 0.0,
+        "raw_baseline_estimate": 57
+      },
+      "outcome_correctly_classified": true
+    },
+    {
+      "task": {
+        "id": "reset-bug-failing",
+        "description": "Diagnose the verify_reset_token failure (test still failing)",
+        "expected_outcome": "regressed"
+      },
+      "agent": "aider",
+      "metrics": {
+        "task_id": "reset-bug-failing",
+        "steps": 2,
+        "final_outcome_class": "passed",
+        "tokens_billed": 11,
+        "tokens_avoided": 0,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 5300,
+        "tokens_cached_read": 0,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 344,
+        "cache_hit_rate": 0.0,
+        "useful_context_ratio": 1.0,
+        "raw_baseline_estimate": 11
+      },
+      "outcome_correctly_classified": false
+    },
+    {
+      "task": {
+        "id": "reset-bug-fixed",
+        "description": "Patch verify_reset_token comparison; verify tests pass",
+        "expected_outcome": "passed"
+      },
+      "agent": "claude-code",
+      "metrics": {
+        "task_id": "reset-bug-fixed",
+        "steps": 3,
+        "final_outcome_class": "passed",
+        "tokens_billed": 11,
+        "tokens_avoided": 0,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 5400,
+        "tokens_cached_read": 12160,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 240,
+        "cache_hit_rate": 0.6925,
+        "useful_context_ratio": 1.0,
+        "raw_baseline_estimate": 11
+      },
+      "outcome_correctly_classified": true
+    },
+    {
+      "task": {
+        "id": "reset-bug-fixed",
+        "description": "Patch verify_reset_token comparison; verify tests pass",
+        "expected_outcome": "passed"
+      },
+      "agent": "aider",
+      "metrics": {
+        "task_id": "reset-bug-fixed",
+        "steps": 2,
+        "final_outcome_class": "passed",
+        "tokens_billed": 11,
+        "tokens_avoided": 0,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 5300,
+        "tokens_cached_read": 0,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 344,
+        "cache_hit_rate": 0.0,
+        "useful_context_ratio": 1.0,
+        "raw_baseline_estimate": 11
+      },
+      "outcome_correctly_classified": true
+    }
+  ]
+}
