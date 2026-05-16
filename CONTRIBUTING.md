@@ -8,7 +8,7 @@ modular — most pull requests touch a single subpackage.
 ```bash
 git clone https://github.com/Alivanroy/ContextMesh.git
 cd ContextMesh
-poetry install        # or: pip install -e ".[dev]"
+poetry install        # or: pip install -e . && pip install pytest pytest-cov ruff
 pytest                # full test suite must pass
 ```
 
@@ -30,11 +30,10 @@ contextmesh/
 
 ## Adding a new agent adapter
 
-The hottest gap. v0.2 ships Claude Code (`stream-json`) and Aider
-(`.aider.chat.history.md`); the next ones to wire are:
+The hottest gap. v0.3 ships Claude Code (`stream-json`), Codex CLI
+(`exec --json`), and Aider (`.aider.chat.history.md`); the next ones to
+wire are:
 
-- **Codex CLI** — has a streaming JSON event format similar to Claude
-  Code. Subprocess + line-fed adapter.
 - **OpenCode** — also stream-based, has tool-call envelopes. Same template.
 - **Cursor** — local SQLite conversation log; the adapter polls or
   diffs the file rather than reading from a subprocess.

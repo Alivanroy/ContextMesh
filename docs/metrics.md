@@ -55,6 +55,17 @@ particular event (the Claude Code adapter does this for its synthetic
 "distilled pytest tool_result" steps, where the credited savings live in
 `tokens_avoided` and the billed-volume column should be zero).
 
+### Optional cost weighting
+
+Cost metrics are disabled until you provide per-million-token prices via
+environment variables. See [cost_metrics.md](cost_metrics.md) for the exact
+settings.
+
+When configured, ContextMesh reports `estimated_cost_usd`,
+`useful_cost_ratio`, `wasted_cost_usd`, and `cost_per_passed_task_usd`.
+These use the same final-outcome rule as `useful_context_ratio`: passed
+tasks get useful credit; non-passing tasks count as waste.
+
 ---
 
 ## Definitions

@@ -1,3 +1,5 @@
+import pytest
+
 from contextmesh.runtime.ledger import record_step
 from contextmesh.runtime.metrics import (
     all_task_metrics,
@@ -94,6 +96,52 @@ def test_provider_tokens_aggregate_per_task_and_global():
     assert g.has_provider_tokens
     assert g.tokens_cached_read >= 4000
     assert g.aggregate_cache_hit_rate > 0
+
+
+def test_cost_weighted_metrics_from_env_pricing(monkeypatch):
+    from contextmesh.runtime.ledger import record_event
+    from contextmesh.runtime.metrics import global_metrics, task_metrics
+
+    monkeypatch.setenv("CONTEXTMESH_PRICE_INPUT_PER_MTOK", "3")
+    monkeypatch.setenv("CONTEXTMESH_PRICE_CACHE_READ_PER_MTOK", "0.3")
+    monkeypatch.setenv("CONTEXTMESH_PRICE_CACHE_WRITE_PER_MTOK", "3.75")
+    monkeypatch.setenv("CONTEXTMESH_PRICE_OUTPUT_PER_MTOK", "15")
+
+    record_event({
+        "task_id": "cost-pass", "step": 1, "agent": "claude",
+        "context_text": "patched", "decision": "d", "outcome": "ok",
+        "outcome_class": "passed",
+        "tokens_provider_input": 1_000_000,
+        "tokens_cached_read": 1_000_000,
+        "tokens_cached_write": 100_000,
+        "tokens_provider_output": 10_000,
+    })
+    record_event({
+        "task_id": "cost-fail", "step": 1, "agent": "claude",
+        "context_text": "failed", "decision": "d", "outcome": "bad",
+        "outcome_class": "regressed",
+        "tokens_provider_input": 500_000,
+        "tokens_provider_output": 10_000,
+    })
+
+    passed = task_metrics("cost-pass")
+    assert passed.estimated_cost_usd == pytest.approx(3 + 0.3 + 0.375 + 0.15)
+    assert passed.useful_cost_ratio == 1.0
+    assert passed.wasted_cost_usd == 0.0
+
+    failed = task_metrics("cost-fail")
+    assert failed.estimated_cost_usd == pytest.approx(1.5 + 0.15)
+    assert failed.useful_cost_ratio == 0.0
+    assert failed.wasted_cost_usd == failed.estimated_cost_usd
+
+    g = global_metrics()
+    assert g.estimated_cost_usd == pytest.approx(
+        passed.estimated_cost_usd + failed.estimated_cost_usd
+    )
+    assert g.useful_cost_usd == pytest.approx(passed.estimated_cost_usd)
+    assert g.wasted_cost_usd == pytest.approx(failed.estimated_cost_usd)
+    assert g.cost_per_passed_task_usd == pytest.approx(passed.estimated_cost_usd)
+    assert 0 < g.useful_cost_ratio < 1
 
 
 def test_find_repeat_waste_flags_cross_task_hashes():

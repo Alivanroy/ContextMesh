@@ -1,0 +1,214 @@
+{
+  "generated_at": "2026-05-16T13:38:57.169183+00:00",
+  "tasks": [
+    {
+      "task_id": "reset-bug-failing",
+      "description": "Diagnose the verify_reset_token failure (test still failing)",
+      "expected_outcome": "regressed"
+    },
+    {
+      "task_id": "reset-bug-fixed",
+      "description": "Patch verify_reset_token comparison; verify tests pass",
+      "expected_outcome": "passed"
+    }
+  ],
+  "agents": [
+    "claude-code",
+    "aider",
+    "codex-cli"
+  ],
+  "runs": [
+    {
+      "task": {
+        "id": "reset-bug-failing",
+        "description": "Diagnose the verify_reset_token failure (test still failing)",
+        "expected_outcome": "regressed"
+      },
+      "agent": "claude-code",
+      "source": {
+        "fixture": "claude_code_session.jsonl",
+        "provenance": "synthetic-real-shape"
+      },
+      "metrics": {
+        "task_id": "reset-bug-failing",
+        "steps": 5,
+        "final_outcome_class": "regressed",
+        "tokens_billed": 29100,
+        "tokens_avoided": 20,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 7260,
+        "tokens_cached_read": 18240,
+        "tokens_cached_write": 3600,
+        "tokens_provider_output": 680,
+        "cache_hit_rate": 0.6268,
+        "useful_context_ratio": 0.0,
+        "raw_baseline_estimate": 29120,
+        "estimated_cost_usd": 0.0,
+        "useful_cost_ratio": 0.0,
+        "wasted_cost_usd": 0.0
+      },
+      "outcome_correctly_classified": true
+    },
+    {
+      "task": {
+        "id": "reset-bug-failing",
+        "description": "Diagnose the verify_reset_token failure (test still failing)",
+        "expected_outcome": "regressed"
+      },
+      "agent": "aider",
+      "source": {
+        "fixture": "aider_real_llama3_failing.md",
+        "provenance": "captured-live"
+      },
+      "metrics": {
+        "task_id": "reset-bug-failing",
+        "steps": 2,
+        "final_outcome_class": "regressed",
+        "tokens_billed": 1580,
+        "tokens_avoided": 69,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 1580,
+        "tokens_cached_read": 0,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 180,
+        "cache_hit_rate": 0.0,
+        "useful_context_ratio": 0.0,
+        "raw_baseline_estimate": 1649,
+        "estimated_cost_usd": 0.0,
+        "useful_cost_ratio": 0.0,
+        "wasted_cost_usd": 0.0
+      },
+      "outcome_correctly_classified": true
+    },
+    {
+      "task": {
+        "id": "reset-bug-failing",
+        "description": "Diagnose the verify_reset_token failure (test still failing)",
+        "expected_outcome": "regressed"
+      },
+      "agent": "codex-cli",
+      "source": {
+        "fixture": "codex_cli_failing_session.jsonl",
+        "provenance": "handcrafted"
+      },
+      "metrics": {
+        "task_id": "reset-bug-failing",
+        "steps": 2,
+        "final_outcome_class": "regressed",
+        "tokens_billed": 24832,
+        "tokens_avoided": 21,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 16640,
+        "tokens_cached_read": 8192,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 97,
+        "cache_hit_rate": 0.3299,
+        "useful_context_ratio": 0.0,
+        "raw_baseline_estimate": 24853,
+        "estimated_cost_usd": 0.0,
+        "useful_cost_ratio": 0.0,
+        "wasted_cost_usd": 0.0
+      },
+      "outcome_correctly_classified": true
+    },
+    {
+      "task": {
+        "id": "reset-bug-fixed",
+        "description": "Patch verify_reset_token comparison; verify tests pass",
+        "expected_outcome": "passed"
+      },
+      "agent": "claude-code",
+      "source": {
+        "fixture": "claude_code_fixed_session.jsonl",
+        "provenance": "synthetic-real-shape"
+      },
+      "metrics": {
+        "task_id": "reset-bug-fixed",
+        "steps": 3,
+        "final_outcome_class": "passed",
+        "tokens_billed": 17560,
+        "tokens_avoided": 0,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 5400,
+        "tokens_cached_read": 12160,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 240,
+        "cache_hit_rate": 0.6925,
+        "useful_context_ratio": 1.0,
+        "raw_baseline_estimate": 17560,
+        "estimated_cost_usd": 0.0,
+        "useful_cost_ratio": 0.0,
+        "wasted_cost_usd": 0.0
+      },
+      "outcome_correctly_classified": true
+    },
+    {
+      "task": {
+        "id": "reset-bug-fixed",
+        "description": "Patch verify_reset_token comparison; verify tests pass",
+        "expected_outcome": "passed"
+      },
+      "agent": "aider",
+      "source": {
+        "fixture": "aider_real_llama3.md",
+        "provenance": "captured-live"
+      },
+      "metrics": {
+        "task_id": "reset-bug-fixed",
+        "steps": 2,
+        "final_outcome_class": "passed",
+        "tokens_billed": 1309,
+        "tokens_avoided": 0,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 1309,
+        "tokens_cached_read": 0,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 160,
+        "cache_hit_rate": 0.0,
+        "useful_context_ratio": 1.0,
+        "raw_baseline_estimate": 1309,
+        "estimated_cost_usd": 0.0,
+        "useful_cost_ratio": 0.0,
+        "wasted_cost_usd": 0.0
+      },
+      "outcome_correctly_classified": true
+    },
+    {
+      "task": {
+        "id": "reset-bug-fixed",
+        "description": "Patch verify_reset_token comparison; verify tests pass",
+        "expected_outcome": "passed"
+      },
+      "agent": "codex-cli",
+      "source": {
+        "fixture": "codex_cli_session.jsonl",
+        "provenance": "captured-live"
+      },
+      "metrics": {
+        "task_id": "reset-bug-fixed",
+        "steps": 2,
+        "final_outcome_class": "passed",
+        "tokens_billed": 30653,
+        "tokens_avoided": 0,
+        "tokens_kept_compressed": 0,
+        "tokens_kept_pinned": 0,
+        "tokens_provider_input": 8893,
+        "tokens_cached_read": 21760,
+        "tokens_cached_write": 0,
+        "tokens_provider_output": 61,
+        "cache_hit_rate": 0.7099,
+        "useful_context_ratio": 1.0,
+        "raw_baseline_estimate": 30653,
+        "estimated_cost_usd": 0.0,
+        "useful_cost_ratio": 0.0,
+        "wasted_cost_usd": 0.0
+      },
+      "outcome_correctly_classified": true
+    }
+  ]
+}

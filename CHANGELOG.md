@@ -4,7 +4,34 @@ All notable changes to ContextMesh are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## v0.3.0 — 2026-05-16
+
+### Added
+
+- **Cost-weighted metrics**: optional `estimated_cost_usd`,
+  `useful_cost_ratio`, `wasted_cost_usd`, and `cost_per_passed_task_usd`
+  fields when per-million-token prices are supplied through environment
+  variables. Token volume remains the source of truth; dollar estimates
+  are explicit and reproducible. See [docs/cost_metrics.md](docs/cost_metrics.md).
+- Dashboard cost rows and per-task cost columns when pricing is configured.
+- **Codex CLI adapter**: parses `codex exec --json` JSONL streams, including
+  command execution events and usage from `turn.completed`.
+- Default benchmark harness now includes Codex CLI fixtures, so the
+  fixture-based leaderboard covers Claude Code, Aider, and Codex CLI.
+  Rows now carry fixture provenance (`captured-live`,
+  `synthetic-real-shape`, or `handcrafted`) so benchmark claims stay honest.
+- Market benchmark snapshot for LangSmith, Langfuse, Phoenix, Helicone,
+  Braintrust, MLflow, and OpenTelemetry positioning:
+  `benchmarks/market_comparison_2026-05-16.md`.
+
+### Fixed
+
+- **First-run SQLite race**: concurrent CLI processes targeting the same
+  brand-new state directory now serialize schema/index writes with a lock
+  file, avoiding `table indexed_file already exists` and duplicate-index
+  write errors. The lock uses `fcntl` on Unix and `msvcrt` on Windows.
+- **`CONTEXTMESH_STATE_DIR` init message**: `contextmesh init` now reports
+  the override state directory and leaves project `.gitignore` untouched.
 
 ### Pivot — observability layer
 

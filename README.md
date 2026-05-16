@@ -14,8 +14,8 @@ matters most:
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
-[![tests: 68](https://img.shields.io/badge/tests-68%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
-[![release: v0.2.2](https://img.shields.io/badge/release-v0.2.2-blue.svg)](https://github.com/Alivanroy/ContextMesh/releases/latest)
+[![tests: 80](https://img.shields.io/badge/tests-80%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
+[![version: v0.3.0](https://img.shields.io/badge/version-v0.3.0-blue.svg)](https://github.com/Alivanroy/ContextMesh)
 
 ---
 
@@ -31,6 +31,10 @@ context worth what you paid?*
 ContextMesh does. The `useful_context_ratio` metric (defined precisely in
 [docs/metrics.md](docs/metrics.md)) sits on top of a typed, evidence-backed
 ledger that any agent can write to.
+
+For v0.3 work, the same ledger can also produce optional cost-weighted
+metrics such as `$ / passed task` when you provide model prices; see
+[docs/cost_metrics.md](docs/cost_metrics.md).
 
 ## Install
 
@@ -56,12 +60,17 @@ contextmesh trace --task-id smoke --silent --from-file \
 contextmesh trace --task-id reset-bug --agent claude-code -- \
     claude -p "fix the failing test" --output-format stream-json --verbose
 
-# 4. Or wrap an Aider session via its chat history
+# 4. Or wrap Codex CLI
+contextmesh trace --task-id reset-bug --agent codex-cli -- \
+    codex -a never exec --json --sandbox workspace-write \
+    "fix the failing test"
+
+# 5. Or wrap an Aider session via its chat history
 aider --model claude-sonnet ...
 contextmesh trace --task-id reset-bug --agent aider --silent \
     --from-file .aider.chat.history.md -- noop
 
-# 5. See where the tokens went
+# 6. See where the tokens went
 contextmesh dashboard
 contextmesh metrics --task-id reset-bug --json
 ```
@@ -134,11 +143,12 @@ but they're not the headline anymore. The headline is what you can
 
 ## Roadmap
 
-- **v0.2 (current)** — observability layer with two real adapters
+- **v0.2** — observability layer with two real adapters
   (Claude Code stream-json, Aider chat history). Ledger, metrics,
   dashboard, delta cache, critical-path focus, `contextmesh trace`.
-- **v0.3** — adapters #3 and #4: Codex CLI / OpenCode (subprocess +
-  stream events) and Cursor (local SQLite conversation log).
+- **v0.3 (current)** — Codex CLI adapter, cost-weighted metrics
+  (`useful_cost_ratio`, `$ / passed task`), and safer concurrent first-run
+  state setup.
 - **v0.4** — published benchmark: useful-context ratio across 4+ agents
   on 10–20 tasks, including SWE-bench Lite cases. Real cache numbers,
   no synthetic fixtures in the headline rows.
@@ -163,6 +173,18 @@ bash demo/run_demo.sh
 Seeds a tiny repo with a buggy `verify_reset_token`, runs `pytest`
 through the distiller, and exports a focused packet bundle for the agent.
 
+## Benchmarks
+
+```bash
+python3 benchmarks/harness.py
+python3 benchmarks/multi_turn_delta.py
+```
+
+The default harness compares Claude Code, Aider, and Codex CLI fixtures on
+the same passing/failing reset-token tasks and labels each row by fixture
+provenance. The current market snapshot lives in
+[benchmarks/market_comparison_2026-05-16.md](benchmarks/market_comparison_2026-05-16.md).
+
 ## Integrations
 
 Drop-in guides under [`docs/integrations/`](docs/integrations/):
@@ -173,21 +195,20 @@ Drop-in guides under [`docs/integrations/`](docs/integrations/):
 
 ## Contributing
 
-Pull requests welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). v0.2 already
-ships adapters for Claude Code (`stream-json`) and Aider
-(`.aider.chat.history.md`). The fastest ways to help right now:
+Pull requests welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). v0.3 ships
+adapters for Claude Code (`stream-json`), Codex CLI (`exec --json`), and
+Aider (`.aider.chat.history.md`). The fastest ways to help right now:
 
-1. **Add the next adapter** — Codex CLI, OpenCode, or Cursor's local
-   conversation log. The base ABC is ~30 LoC, the existing concrete
+1. **Add the next adapter** — OpenCode or Cursor's local conversation log.
+   The base ABC is ~30 LoC, the existing concrete
    adapters are ~150 LoC each, and there's a fixture-based test pattern
    to copy in `tests/test_adapter_*.py`.
 2. **Add a tree-sitter language** (TS / Go / Rust) to the indexer so the
    `expand`/focus path works on polyglot repos.
 3. **Run `contextmesh trace` against your real workflow** and open an
    issue with a screenshot of the dashboard or a failing-trace bug.
-4. **Cost-weighted metrics**: token volume is one axis; provider-priced
-   `$/passed-task` is the other. The four-column ledger already has
-   what we need — see issue tracker for the design draft.
+4. **Broaden the benchmark**: add richer coding tasks and compare Claude
+   Code, Codex CLI, Aider, OpenCode, and Cursor on identical fixtures.
 
 ## License
 

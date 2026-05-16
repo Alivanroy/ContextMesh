@@ -19,8 +19,15 @@ console = Console()
 @app.command()
 def init():
     """Initialize ContextMesh state in the current directory."""
-    from contextmesh.config import DIR_NAME, load_config
+    from contextmesh.config import DIR_NAME, env_state_dir, load_config
     from contextmesh.storage.db import create_db_and_tables
+
+    override_state = env_state_dir()
+    if override_state:
+        create_db_and_tables()
+        console.print(f"[green]ContextMesh initialized.[/green] State at [bold]{override_state}[/bold]")
+        console.print("[dim]Using CONTEXTMESH_STATE_DIR override; project .gitignore unchanged.[/dim]")
+        return
 
     config = load_config(create=True)
     create_db_and_tables()

@@ -1,0 +1,8 @@
+Reading additional input from stdin...
+{"type":"thread.started","thread_id":"thread-codex-fixture"}
+{"type":"turn.started"}
+2026-05-16T08:40:49Z WARN plugin warning that is not JSON
+{"type":"item.started","item":{"id":"item_0","type":"command_execution","command":"/bin/zsh -lc \"python3 -m pytest tests/test_reset.py\"","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"command_execution","command":"/bin/zsh -lc \"python3 -m pytest tests/test_reset.py\"","aggregated_output":"============================= test session starts ==============================\ncollected 1 item\n\ntests/test_reset.py .                                                    [100%]\n\n============================== 1 passed in 0.04s ===============================\n","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Tests passed."}}
+{"type":"turn.completed","usage":{"input_tokens":30653,"cached_input_tokens":21760,"output_tokens":61,"reasoning_output_tokens":0}}

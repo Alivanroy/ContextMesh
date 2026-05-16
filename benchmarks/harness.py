@@ -50,9 +50,11 @@ class AgentSource:
     default implementation just reads a fixture file; override to spawn a
     real subprocess.
     """
-    name: str          # agent label written to the ledger ("claude-code" / "aider")
-    adapter_key: str   # registry key ("claude-code" or "aider")
+    name: str          # agent label written to the ledger
+    adapter_key: str   # registry key
     runner: Callable[[Task], list[str]]
+    fixture_name: Callable[[Task], str] | None = None
+    provenance: Callable[[Task], str] = lambda _task: "unknown"
 
 
 def _fixture_runner(filename_for: Callable[[Task], str]) -> Callable[[Task], list[str]]:
@@ -78,12 +80,15 @@ def default_tasks() -> list[Task]:
 
 
 def default_agents() -> list[AgentSource]:
-    """Two agents wired to fixtures so the harness runs without auth."""
+    """Agents wired to fixtures so the harness runs without auth."""
 
     def claude_fixture(task: Task) -> str:
         if task.expected_outcome == "passed":
             return "claude_code_fixed_session.jsonl"
         return "claude_code_session.jsonl"
+
+    def claude_provenance(_task: Task) -> str:
+        return "synthetic-real-shape"
 
     def aider_fixture(task: Task) -> str:
         # Real Aider + Ollama llama3 sessions, captured 2026-05-02. The
@@ -93,11 +98,32 @@ def default_agents() -> list[AgentSource]:
             return "aider_real_llama3.md"
         return "aider_real_llama3_failing.md"
 
+    def aider_provenance(_task: Task) -> str:
+        return "captured-live"
+
+    def codex_fixture(task: Task) -> str:
+        if task.expected_outcome == "passed":
+            return "codex_cli_session.jsonl"
+        return "codex_cli_failing_session.jsonl"
+
+    def codex_provenance(task: Task) -> str:
+        if task.expected_outcome == "passed":
+            return "captured-live"
+        return "handcrafted"
+
     return [
         AgentSource(name="claude-code", adapter_key="claude-code",
-                    runner=_fixture_runner(claude_fixture)),
+                    runner=_fixture_runner(claude_fixture),
+                    fixture_name=claude_fixture,
+                    provenance=claude_provenance),
         AgentSource(name="aider", adapter_key="aider",
-                    runner=_fixture_runner(aider_fixture)),
+                    runner=_fixture_runner(aider_fixture),
+                    fixture_name=aider_fixture,
+                    provenance=aider_provenance),
+        AgentSource(name="codex-cli", adapter_key="codex-cli",
+                    runner=_fixture_runner(codex_fixture),
+                    fixture_name=codex_fixture,
+                    provenance=codex_provenance),
     ]
 
 
@@ -125,6 +151,10 @@ def _run_one(task: Task, source: AgentSource) -> dict:
                 "expected_outcome": task.expected_outcome,
             },
             "agent": source.name,
+            "source": {
+                "fixture": source.fixture_name(task) if source.fixture_name else None,
+                "provenance": source.provenance(task),
+            },
             "metrics": m.as_dict(),
             "outcome_correctly_classified":
                 m.final_outcome_class == task.expected_outcome,
@@ -145,13 +175,14 @@ def run(tasks: list[Task], agents: list[AgentSource]) -> dict:
 
 
 def render(report: dict, *, file=sys.stdout) -> None:
-    print("=" * 96, file=file)
-    print(f"ContextMesh benchmark — {report['generated_at']}", file=file)
-    print("=" * 96, file=file)
     header = (
-        f"{'Task':<26} {'Agent':<14} {'Outcome':<10} "
+        f"{'Task':<26} {'Agent':<14} {'Source':<20} {'Outcome':<10} "
         f"{'Input':>7} {'CacheR':>7} {'CacheW':>7} {'Output':>7} {'Avoided':>8} {'Useful%':>8}"
     )
+    divider = "=" * len(header)
+    print(divider, file=file)
+    print(f"ContextMesh benchmark — {report['generated_at']}", file=file)
+    print(divider, file=file)
     print(header, file=file)
     print("-" * len(header), file=file)
     for r in report["runs"]:
@@ -160,6 +191,7 @@ def render(report: dict, *, file=sys.stdout) -> None:
         marker = "  ✓" if r["outcome_correctly_classified"] else "  ✗"
         print(
             f"{r['task']['id']:<26} {r['agent']:<14} "
+            f"{r['source']['provenance']:<20} "
             f"{m['final_outcome_class']:<10} "
             f"{m['tokens_provider_input']:>7,} "
             f"{m['tokens_cached_read']:>7,} "

@@ -1,7 +1,10 @@
 """Persistent storage for the index, ledger, and seen-packet cache."""
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
 
 from sqlmodel import Field, Session, SQLModel, create_engine
 
@@ -17,6 +20,45 @@ def _build_url() -> str:
         override.mkdir(parents=True, exist_ok=True)
         return f"sqlite:///{override / 'contextmesh.db'}"
     return load_config().db_url
+
+
+def _db_path() -> Path:
+    override = env_state_dir()
+    if override:
+        override.mkdir(parents=True, exist_ok=True)
+        return override / "contextmesh.db"
+    return load_config().db_path
+
+
+@contextmanager
+def db_write_lock() -> Iterator[None]:
+    """Serialize SQLite schema/index writes across CLI processes."""
+    lock_path = _db_path().with_suffix(".schema.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        try:
+            import fcntl
+        except ImportError:
+            fcntl = None
+        try:
+            import msvcrt
+        except ImportError:
+            msvcrt = None
+
+        if fcntl is not None:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        elif msvcrt is not None:
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+
+        try:
+            yield
+        finally:
+            if fcntl is not None:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            elif msvcrt is not None:
+                lock_file.seek(0)
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def get_engine():
@@ -40,6 +82,12 @@ def reset_engine() -> None:
 
 
 def create_db_and_tables() -> None:
+    with db_write_lock():
+        create_db_and_tables_unlocked()
+
+
+def create_db_and_tables_unlocked() -> None:
+    """Create tables while the caller already holds ``db_write_lock``."""
     SQLModel.metadata.create_all(get_engine())
 
 

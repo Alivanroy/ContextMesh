@@ -27,6 +27,7 @@ from dataclasses import dataclass
 
 from sqlmodel import select
 
+from contextmesh.runtime.pricing import estimate_cost_usd, load_price_model
 from contextmesh.storage.db import LedgerEntry, create_db_and_tables, get_session
 
 
@@ -45,6 +46,9 @@ class TaskMetrics:
     tokens_cached_read: int = 0
     tokens_cached_write: int = 0
     tokens_provider_output: int = 0
+    estimated_cost_usd: float = 0.0
+    useful_cost_ratio: float = 0.0
+    wasted_cost_usd: float = 0.0
 
     @property
     def has_provider_tokens(self) -> bool:
@@ -80,6 +84,9 @@ class TaskMetrics:
             "cache_hit_rate": round(self.cache_hit_rate, 4),
             "useful_context_ratio": round(self.useful_context_ratio, 4),
             "raw_baseline_estimate": self.raw_baseline_estimate,
+            "estimated_cost_usd": round(self.estimated_cost_usd, 6),
+            "useful_cost_ratio": round(self.useful_cost_ratio, 4),
+            "wasted_cost_usd": round(self.wasted_cost_usd, 6),
         }
 
 
@@ -97,6 +104,11 @@ class GlobalMetrics:
     tokens_cached_read: int = 0
     tokens_cached_write: int = 0
     tokens_provider_output: int = 0
+    estimated_cost_usd: float = 0.0
+    useful_cost_usd: float = 0.0
+    wasted_cost_usd: float = 0.0
+    useful_cost_ratio: float = 0.0
+    cost_per_passed_task_usd: float = 0.0
 
     @property
     def has_provider_tokens(self) -> bool:
@@ -131,6 +143,11 @@ class GlobalMetrics:
             "aggregate_cache_hit_rate": round(self.aggregate_cache_hit_rate, 4),
             "aggregate_useful_context_ratio": round(self.aggregate_useful_context_ratio, 4),
             "aggregate_avoidance_ratio": round(self.aggregate_avoidance_ratio, 4),
+            "estimated_cost_usd": round(self.estimated_cost_usd, 6),
+            "useful_cost_usd": round(self.useful_cost_usd, 6),
+            "wasted_cost_usd": round(self.wasted_cost_usd, 6),
+            "useful_cost_ratio": round(self.useful_cost_ratio, 4),
+            "cost_per_passed_task_usd": round(self.cost_per_passed_task_usd, 6),
         }
 
 
@@ -179,6 +196,14 @@ def _task_metrics_from_steps(task_id: str, steps: list[LedgerEntry]) -> TaskMetr
     final = steps[-1].outcome_class
     useful = billed if final == "passed" else 0
     ratio = useful / billed if billed > 0 else 0.0
+    estimated_cost = estimate_cost_usd(
+        tokens_provider_input=provider_in,
+        tokens_cached_read=cached_read,
+        tokens_cached_write=cached_write,
+        tokens_provider_output=provider_out,
+        price_model=load_price_model(),
+    )
+    useful_cost = estimated_cost if final == "passed" else 0.0
     return TaskMetrics(
         task_id=task_id,
         steps=len(steps),
@@ -193,6 +218,9 @@ def _task_metrics_from_steps(task_id: str, steps: list[LedgerEntry]) -> TaskMetr
         tokens_cached_read=cached_read,
         tokens_cached_write=cached_write,
         tokens_provider_output=provider_out,
+        estimated_cost_usd=estimated_cost,
+        useful_cost_ratio=useful_cost / estimated_cost if estimated_cost > 0 else 0.0,
+        wasted_cost_usd=max(0.0, estimated_cost - useful_cost),
     )
 
 
@@ -219,6 +247,9 @@ def global_metrics() -> GlobalMetrics:
     cached_write = sum(m.tokens_cached_write for m in metrics)
     provider_out = sum(m.tokens_provider_output for m in metrics)
     useful = sum(m.tokens_billed for m in metrics if m.final_outcome_class == "passed")
+    estimated_cost = sum(m.estimated_cost_usd for m in metrics)
+    useful_cost = sum(m.estimated_cost_usd for m in metrics if m.final_outcome_class == "passed")
+    passed_tasks = sum(1 for m in metrics if m.final_outcome_class == "passed")
     return GlobalMetrics(
         tasks=len(metrics),
         by_outcome=dict(by_outcome),
@@ -232,6 +263,11 @@ def global_metrics() -> GlobalMetrics:
         tokens_cached_read=cached_read,
         tokens_cached_write=cached_write,
         tokens_provider_output=provider_out,
+        estimated_cost_usd=estimated_cost,
+        useful_cost_usd=useful_cost,
+        wasted_cost_usd=max(0.0, estimated_cost - useful_cost),
+        useful_cost_ratio=useful_cost / estimated_cost if estimated_cost > 0 else 0.0,
+        cost_per_passed_task_usd=useful_cost / passed_tasks if passed_tasks > 0 else 0.0,
     )
 
 

@@ -13,6 +13,12 @@ def test_harness_runs_all_combinations(monkeypatch):
     assert len(report["runs"]) == len(tasks) * len(agents)
     for r in report["runs"]:
         assert "metrics" in r
+        assert r["source"]["fixture"]
+        assert r["source"]["provenance"] in {
+            "captured-live",
+            "handcrafted",
+            "synthetic-real-shape",
+        }
         m = r["metrics"]
         # Every run must surface the four provider columns and useful_context_ratio
         for key in (
@@ -75,6 +81,7 @@ def test_harness_render_emits_leaderboard():
     render(report, file=buf)
     out = buf.getvalue()
     assert "ContextMesh benchmark" in out
+    assert "Source" in out
     assert "Useful%" in out
     for r in report["runs"]:
         assert r["task"]["id"] in out

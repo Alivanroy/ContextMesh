@@ -5,4 +5,4 @@ from __future__ import annotations
 # from installed package metadata when the package is installed; tests
 # enforce it equals the value below so import-time access works in dev
 # checkouts too.
-__version__ = "0.2.2"
+__version__ = "0.3.0"

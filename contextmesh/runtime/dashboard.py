@@ -36,6 +36,10 @@ def _ratio_pct(x: float) -> str:
     return f"{x * 100:5.1f}%"
 
 
+def _usd(x: float) -> str:
+    return f"${x:,.4f}"
+
+
 def _bar(value: int, total: int, width: int = 12) -> str:
     if total <= 0:
         return " " * width
@@ -68,6 +72,12 @@ def render_overview(console: Console) -> None:
             "Cache hit rate",
             f"[bold]{_ratio_pct(g.aggregate_cache_hit_rate)}[/bold]",
         )
+    if g.estimated_cost_usd > 0:
+        table.add_row("", "")
+        table.add_row("Estimated cost", _usd(g.estimated_cost_usd))
+        table.add_row("Useful cost ratio", f"[bold]{_ratio_pct(g.useful_cost_ratio)}[/bold]")
+        table.add_row("Wasted cost", f"[red]{_usd(g.wasted_cost_usd)}[/red]")
+        table.add_row("Cost / passed task", _usd(g.cost_per_passed_task_usd))
     table.add_row(
         "Avoidance ratio",
         f"[bold]{_ratio_pct(g.aggregate_avoidance_ratio)}[/bold]",
@@ -103,10 +113,13 @@ def render_per_task(console: Console) -> None:
     table.add_column("Compressed", justify="right")
     table.add_column("Pinned", justify="right")
     table.add_column("Useful", justify="right")
+    if any(m.estimated_cost_usd > 0 for m in metrics):
+        table.add_column("Cost", justify="right")
+        table.add_column("Waste $", justify="right")
 
     for m in metrics:
         color = _OUTCOME_COLORS.get(m.final_outcome_class, "white")
-        table.add_row(
+        row = [
             m.task_id,
             str(m.steps),
             f"[{color}]{m.final_outcome_class}[/]",
@@ -115,7 +128,13 @@ def render_per_task(console: Console) -> None:
             f"{m.tokens_kept_compressed:,}",
             f"{m.tokens_kept_pinned:,}",
             f"[bold]{_ratio_pct(m.useful_context_ratio)}[/bold]",
-        )
+        ]
+        if any(x.estimated_cost_usd > 0 for x in metrics):
+            row.extend([
+                _usd(m.estimated_cost_usd),
+                f"[red]{_usd(m.wasted_cost_usd)}[/red]" if m.wasted_cost_usd > 0 else _usd(0.0),
+            ])
+        table.add_row(*row)
     console.print(table)
 
 

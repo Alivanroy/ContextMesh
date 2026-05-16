@@ -2,10 +2,13 @@
 from contextmesh.adapters.aider import AiderAdapter
 from contextmesh.adapters.base import Adapter
 from contextmesh.adapters.claude_code import ClaudeCodeAdapter
+from contextmesh.adapters.codex_cli import CodexCliAdapter
 
 ADAPTERS: dict[str, type[Adapter]] = {
     "claude-code": ClaudeCodeAdapter,
     "claude": ClaudeCodeAdapter,
+    "codex-cli": CodexCliAdapter,
+    "codex": CodexCliAdapter,
     "aider": AiderAdapter,
 }
 
@@ -16,4 +19,11 @@ def get_adapter(name: str) -> type[Adapter]:
     return ADAPTERS[name]
 
 
-__all__ = ["Adapter", "AiderAdapter", "ClaudeCodeAdapter", "ADAPTERS", "get_adapter"]
+__all__ = [
+    "Adapter",
+    "AiderAdapter",
+    "ClaudeCodeAdapter",
+    "CodexCliAdapter",
+    "ADAPTERS",
+    "get_adapter",
+]

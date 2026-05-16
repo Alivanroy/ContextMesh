@@ -25,6 +25,8 @@ from contextmesh.storage.db import (
     IndexedFile,
     IndexedSymbol,
     create_db_and_tables,
+    create_db_and_tables_unlocked,
+    db_write_lock,
     get_session,
 )
 
@@ -94,71 +96,72 @@ def reindex(root: str | Path | None = None) -> IndexStats:
     """Walk *root* and update the persisted index. Returns stats."""
     config = load_config()
     base = Path(root).resolve() if root else config.project_root
-    create_db_and_tables()
 
     stats = IndexStats()
     seen_paths: set[str] = set()
 
-    with get_session() as session:
-        existing = {
-            f.path: f
-            for f in session.exec(select(IndexedFile)).all()
-        }
+    with db_write_lock():
+        create_db_and_tables_unlocked()
+        with get_session() as session:
+            existing = {
+                f.path: f
+                for f in session.exec(select(IndexedFile)).all()
+            }
 
-        for filepath in walk_repo(base):
-            stats.scanned += 1
-            rel = relpath(filepath, root=config.project_root)
-            seen_paths.add(rel)
-            try:
-                info = index_file(filepath)
-            except OSError:
-                stats.failed += 1
-                continue
-
-            row = existing.get(rel)
-            if row is None:
-                row = IndexedFile(
-                    path=rel,
-                    language=info["language"],
-                    size=info["size"],
-                    sha256=info["sha256"],
-                    line_count=info["line_count"],
-                    last_modified=info["last_modified"],
-                )
-                session.add(row)
-                stats.new += 1
-                changed = True
-            elif row.sha256 != info["sha256"]:
-                row.size = info["size"]
-                row.sha256 = info["sha256"]
-                row.line_count = info["line_count"]
-                row.last_modified = info["last_modified"]
-                row.language = info["language"]
-                session.add(row)
-                stats.changed += 1
-                changed = True
-            else:
-                stats.unchanged += 1
-                changed = False
-
-            if changed and detect_language(filepath) == "python":
+            for filepath in walk_repo(base):
+                stats.scanned += 1
+                rel = relpath(filepath, root=config.project_root)
+                seen_paths.add(rel)
                 try:
-                    with open(filepath, "rb") as f:
-                        source = f.read()
-                    stats.symbols += _upsert_symbols(session, rel, source)
+                    info = index_file(filepath)
                 except OSError:
                     stats.failed += 1
+                    continue
 
-        for path, row in existing.items():
-            if path not in seen_paths:
-                session.delete(row)
-                for sym in session.exec(
-                    select(IndexedSymbol).where(IndexedSymbol.file_path == path)
-                ).all():
-                    session.delete(sym)
-                stats.removed += 1
+                row = existing.get(rel)
+                if row is None:
+                    row = IndexedFile(
+                        path=rel,
+                        language=info["language"],
+                        size=info["size"],
+                        sha256=info["sha256"],
+                        line_count=info["line_count"],
+                        last_modified=info["last_modified"],
+                    )
+                    session.add(row)
+                    stats.new += 1
+                    changed = True
+                elif row.sha256 != info["sha256"]:
+                    row.size = info["size"]
+                    row.sha256 = info["sha256"]
+                    row.line_count = info["line_count"]
+                    row.last_modified = info["last_modified"]
+                    row.language = info["language"]
+                    session.add(row)
+                    stats.changed += 1
+                    changed = True
+                else:
+                    stats.unchanged += 1
+                    changed = False
 
-        session.commit()
+                if changed and detect_language(filepath) == "python":
+                    try:
+                        with open(filepath, "rb") as f:
+                            source = f.read()
+                        stats.symbols += _upsert_symbols(session, rel, source)
+                    except OSError:
+                        stats.failed += 1
+
+            for path, row in existing.items():
+                if path not in seen_paths:
+                    session.delete(row)
+                    for sym in session.exec(
+                        select(IndexedSymbol).where(IndexedSymbol.file_path == path)
+                    ).all():
+                        session.delete(sym)
+                    stats.removed += 1
+
+            session.commit()
 
     return stats
 
