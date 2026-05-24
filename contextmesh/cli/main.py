@@ -211,6 +211,9 @@ def expand_cmd(
 ledger_app = typer.Typer(help="Inspect and append to the context ledger.")
 app.add_typer(ledger_app, name="ledger")
 
+context_app = typer.Typer(help="Record and inspect context candidates.")
+app.add_typer(context_app, name="context")
+
 
 @ledger_app.command("show")
 def ledger_show(
@@ -283,6 +286,138 @@ def ledger_record(
         f"[green]recorded[/green] step {entry.step} for {entry.task_id} "
         f"({entry.tokens_estimated} tokens, outcome={entry.outcome_class})"
     )
+
+
+@context_app.command("record")
+def context_record(
+    task_id: str = typer.Option(..., "--task-id"),
+    step: int = typer.Option(..., "--step"),
+    ref: str = typer.Option(..., "--ref", help="Context reference id"),
+    status: str = typer.Option(
+        ...,
+        "--status",
+        help="available | selected | rejected",
+    ),
+    source_type: str = typer.Option("unknown", "--source-type"),
+    reason: str = typer.Option("", "--reason"),
+    relevance_score: float | None = typer.Option(None, "--relevance-score"),
+    tokens_estimated: int = typer.Option(0, "--tokens-estimated"),
+):
+    """Record one available, selected, or rejected context candidate."""
+    from contextmesh.runtime.context_candidates import CandidateInput, record_candidate
+
+    try:
+        candidate = record_candidate(CandidateInput(
+            task_id=task_id,
+            step=step,
+            ref=ref,
+            status=status,
+            source_type=source_type,
+            reason=reason,
+            relevance_score=relevance_score,
+            tokens_estimated=tokens_estimated,
+        ))
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(
+        f"[green]recorded[/green] {candidate.status} context "
+        f"{candidate.ref} for {candidate.task_id} step {candidate.step}"
+    )
+
+
+@context_app.command("show")
+def context_show(
+    task_id: str = typer.Option(..., "--task-id"),
+    status: str | None = typer.Option(None, "--status", help="available | selected | rejected"),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON"),
+):
+    """Show context candidates recorded for a task."""
+    from contextmesh.runtime.context_candidates import candidate_as_dict, list_candidates
+
+    try:
+        candidates = list_candidates(task_id, status=status)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    if json_output:
+        sys.stdout.write(json.dumps([candidate_as_dict(c) for c in candidates], indent=2) + "\n")
+        return
+
+    if not candidates:
+        console.print("[dim]No context candidates recorded.[/dim]")
+        return
+
+    table = Table(title=f"Context candidates for {task_id}")
+    table.add_column("Step", justify="right")
+    table.add_column("Status")
+    table.add_column("Ref", style="cyan")
+    table.add_column("Source")
+    table.add_column("Score", justify="right")
+    table.add_column("Tokens", justify="right")
+    table.add_column("Reason")
+    for candidate in candidates:
+        table.add_row(
+            str(candidate.step),
+            candidate.status,
+            candidate.ref,
+            candidate.source_type,
+            "" if candidate.relevance_score is None else f"{candidate.relevance_score:.2f}",
+            f"{candidate.tokens_estimated:,}",
+            candidate.reason,
+        )
+    console.print(table)
+
+
+@context_app.command("audit")
+def context_audit(
+    task_id: str = typer.Option(..., "--task-id"),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON"),
+):
+    """Audit candidate selection for relevance, duplication, size, and sensitivity."""
+    from contextmesh.runtime.context_audit import audit_context_candidates
+
+    audit = audit_context_candidates(task_id)
+    if json_output:
+        sys.stdout.write(json.dumps(audit.as_dict(), indent=2) + "\n")
+        return
+
+    if not audit.findings:
+        console.print(f"[green]No context audit findings for {task_id}.[/green]")
+        return
+
+    table = Table(title=f"Context audit for {task_id}")
+    table.add_column("Severity")
+    table.add_column("Code")
+    table.add_column("Step", justify="right")
+    table.add_column("Ref", style="cyan")
+    table.add_column("Message")
+    for finding in audit.findings:
+        table.add_row(
+            finding.severity,
+            finding.code,
+            "" if finding.step is None else str(finding.step),
+            finding.ref,
+            finding.message,
+        )
+    console.print(table)
+
+
+@context_app.command("schema")
+def context_schema(
+    name: str = typer.Argument(
+        "all",
+        help="candidate | inspection | diff | audit | langfuse-export | otel-export | all",
+    ),
+):
+    """Print JSON Schema for context intelligence payloads."""
+    from contextmesh.runtime.context_schema import all_context_schemas, get_context_schema
+
+    try:
+        payload = all_context_schemas() if name == "all" else get_context_schema(name)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    sys.stdout.write(json.dumps(payload, indent=2) + "\n")
 
 
 @app.command()
@@ -388,6 +523,184 @@ def metrics_cmd(
 
     for k, v in m.items():
         console.print(f"  {k}: [bold]{v}[/bold]")
+
+
+@app.command(name="inspect")
+def inspect_cmd(
+    task_id: str = typer.Option(..., "--task-id", help="Task id to inspect"),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON"),
+):
+    """Inspect context selection quality for one recorded task."""
+    from contextmesh.runtime.inspector import inspect_task
+
+    inspection = inspect_task(task_id)
+    payload = inspection.as_dict()
+    if json_output:
+        sys.stdout.write(json.dumps(payload, indent=2) + "\n")
+        return
+
+    console.print(f"[bold cyan]Context inspection[/bold cyan] task={inspection.task_id}")
+    console.print(f"  outcome: [bold]{inspection.final_outcome_class}[/bold]")
+    console.print(f"  steps: [bold]{inspection.steps}[/bold]")
+    console.print(f"  agents: [bold]{', '.join(inspection.agents) or 'unknown'}[/bold]")
+    console.print(f"  context_quality_score: [bold]{inspection.context_quality_score:.1%}[/bold]")
+    console.print(f"  useful_context_ratio: [bold]{inspection.useful_context_ratio:.1%}[/bold]")
+    console.print(
+        "  score_breakdown: "
+        + ", ".join(
+            f"{name}={value:.1%}" for name, value in inspection.score_breakdown.items()
+        )
+    )
+
+    if inspection.selected_context:
+        table = Table(title="Selected context refs")
+        table.add_column("Ref", style="cyan")
+        table.add_column("Times", justify="right")
+        table.add_column("First step", justify="right")
+        table.add_column("Last step", justify="right")
+        for item in inspection.selected_context[:20]:
+            table.add_row(
+                item.ref,
+                str(item.times_selected),
+                str(item.first_step),
+                str(item.last_step),
+            )
+        console.print(table)
+    else:
+        console.print("[yellow]No context refs were recorded for this task.[/yellow]")
+
+    console.print("[bold]Recommendations[/bold]")
+    for rec in inspection.recommendations:
+        console.print(f"  - {rec}")
+
+
+@app.command(name="diff")
+def diff_cmd(
+    left: str = typer.Option(..., "--left", help="Baseline or failed task id"),
+    right: str = typer.Option(..., "--right", help="Comparison or passed task id"),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON"),
+):
+    """Compare context quality and selected refs between two tasks."""
+    from contextmesh.runtime.inspector import diff_tasks
+
+    diff = diff_tasks(left, right)
+    payload = diff.as_dict()
+    if json_output:
+        sys.stdout.write(json.dumps(payload, indent=2) + "\n")
+        return
+
+    console.print(
+        f"[bold cyan]Context diff[/bold cyan] "
+        f"{diff.left_task_id} -> {diff.right_task_id}"
+    )
+    console.print(
+        f"  outcome: [bold]{diff.left_outcome_class}[/bold] -> "
+        f"[bold]{diff.right_outcome_class}[/bold]"
+    )
+    console.print(
+        f"  quality: [bold]{diff.left_context_quality_score:.1%}[/bold] -> "
+        f"[bold]{diff.right_context_quality_score:.1%}[/bold] "
+        f"(delta {diff.quality_delta:+.1%})"
+    )
+    console.print(f"  billed token delta: [bold]{diff.tokens_billed_delta:+,}[/bold]")
+    console.print(f"  avoided token delta: [bold]{diff.tokens_avoided_delta:+,}[/bold]")
+    console.print(f"  duplicate ref delta: [bold]{diff.duplicate_ref_delta:+,}[/bold]")
+
+    table = Table(title="Context ref changes")
+    table.add_column("Only left", style="red")
+    table.add_column("Shared", style="dim")
+    table.add_column("Only right", style="green")
+    max_rows = max(
+        len(diff.refs_only_left),
+        len(diff.refs_shared),
+        len(diff.refs_only_right),
+        1,
+    )
+    for idx in range(max_rows):
+        table.add_row(
+            diff.refs_only_left[idx] if idx < len(diff.refs_only_left) else "",
+            diff.refs_shared[idx] if idx < len(diff.refs_shared) else "",
+            diff.refs_only_right[idx] if idx < len(diff.refs_only_right) else "",
+        )
+    console.print(table)
+
+    console.print("[bold]Recommendations[/bold]")
+    for rec in diff.recommendations:
+        console.print(f"  - {rec}")
+
+
+@app.command(name="export-langfuse")
+def export_langfuse_cmd(
+    task_id: str = typer.Option(..., "--task-id", help="Task id to export"),
+    trace_id: str | None = typer.Option(None, "--trace-id", help="Optional Langfuse trace id"),
+    tag: list[str] = typer.Option([], "--tag", help="Additional tag; repeatable"),
+    out: str | None = typer.Option(None, "--out", help="Write JSON to file instead of stdout"),
+):
+    """Emit a Langfuse-ready metadata payload for one ContextMesh task."""
+    from contextmesh.runtime.langfuse_export import build_langfuse_export
+
+    payload = build_langfuse_export(
+        task_id,
+        trace_id=trace_id,
+        tags=list(tag),
+    ).as_dict()
+    rendered = json.dumps(payload, indent=2) + "\n"
+    if out:
+        Path(out).write_text(rendered, encoding="utf-8")
+        console.print(f"[green]wrote[/green] Langfuse payload to {out}")
+        return
+    sys.stdout.write(rendered)
+
+
+@app.command(name="export-otel")
+def export_otel_cmd(
+    task_id: str = typer.Option(..., "--task-id", help="Task id to export"),
+    trace_id: str | None = typer.Option(None, "--trace-id", help="Optional 32-char hex trace id"),
+    service_name: str = typer.Option("contextmesh", "--service-name", help="OTel service.name"),
+    out: str | None = typer.Option(None, "--out", help="Write JSON to file instead of stdout"),
+):
+    """Emit an OpenTelemetry OTLP/JSON-shaped payload for one ContextMesh task."""
+    from contextmesh.runtime.otel_export import build_otel_export
+
+    try:
+        payload = build_otel_export(
+            task_id,
+            trace_id=trace_id,
+            service_name=service_name,
+        ).as_dict()
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    rendered = json.dumps(payload, indent=2) + "\n"
+    if out:
+        Path(out).write_text(rendered, encoding="utf-8")
+        console.print(f"[green]wrote[/green] OpenTelemetry payload to {out}")
+        return
+    sys.stdout.write(rendered)
+
+
+@app.command(name="export-team")
+def export_team_cmd(
+    task_id: str = typer.Option(..., "--task-id", help="Task id to export"),
+    target: str = typer.Option(
+        ...,
+        "--target",
+        help="slack | ms-teams | linear | jira | github",
+    ),
+    out: str | None = typer.Option(None, "--out", help="Write JSON to file instead of stdout"),
+):
+    """Emit a no-network payload for team tools."""
+    from contextmesh.runtime.team_export import build_team_export
+
+    try:
+        payload = build_team_export(task_id, target=target).as_dict()
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    rendered = json.dumps(payload, indent=2) + "\n"
+    if out:
+        Path(out).write_text(rendered, encoding="utf-8")
+        console.print(f"[green]wrote[/green] {target} payload to {out}")
+        return
+    sys.stdout.write(rendered)
 
 
 @app.command(name="waste")

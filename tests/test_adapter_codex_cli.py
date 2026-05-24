@@ -23,6 +23,15 @@ def test_codex_cli_fixture_records_command_and_turn_usage():
     assert command["decision"].startswith("command:")
     assert command["tokens_estimated"] == 0
     assert command["outcome_class"] == "passed"
+    assert "tool_output:command_execution" in command["context_refs"]
+    assert any(
+        ref.startswith("tool_output:command_execution:")
+        for ref in command["context_refs"]
+    )
+    assert any(
+        ref.startswith("generated_packet:command_result:")
+        for ref in command["context_refs"]
+    )
 
     assert final["decision"] == "final"
     assert final["outcome_class"] == "passed"
@@ -30,6 +39,7 @@ def test_codex_cli_fixture_records_command_and_turn_usage():
     assert final["tokens_cached_read"] == 21760
     assert final["tokens_provider_output"] == 61
     assert "thread:thread-codex-fixture" in final["context_refs"]
+    assert any(ref.startswith("prompt_block:agent_message:") for ref in final["context_refs"])
 
 
 def test_codex_cli_failing_fixture_classifies_regression():

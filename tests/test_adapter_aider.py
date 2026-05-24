@@ -31,6 +31,7 @@ def test_user_marker_opens_a_turn():
     events = adapter.finalize()
     assert len(events) == 1
     assert events[0]["context_text"] == "do the thing"
+    assert any(ref.startswith("prompt_block:user:") for ref in events[0]["context_refs"])
 
 
 def test_cost_line_is_captured():
@@ -52,6 +53,12 @@ def test_pytest_in_blockquote_classifies_outcome():
     adapter.feed("Tokens: 1.1k sent, 24 received. Cost: $0.001 message, $0.001 session.\n")
     events = adapter.finalize()
     assert events[-1]["outcome_class"] == "passed"
+    assert "tool_output:pytest" in events[-1]["context_refs"]
+    assert any(ref.startswith("tool_output:pytest:") for ref in events[-1]["context_refs"])
+    assert any(
+        ref.startswith("generated_packet:command_result:")
+        for ref in events[-1]["context_refs"]
+    )
 
 
 def test_full_aider_fixture():

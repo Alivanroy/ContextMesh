@@ -1,0 +1,18 @@
+{
+  "ticket_id": "ENT-42891",
+  "customer": "Acme Financial Group",
+  "tier": "enterprise",
+  "region": "eu-west",
+  "reported_at": "2026-05-24T07:12:00Z",
+  "summary": "Password reset links intermittently fail for privileged banking operators after the auth rollout.",
+  "impact": "42 operators blocked from reset flow; trading-desk support cannot rotate credentials.",
+  "signals": [
+    "password reset",
+    "privileged operators",
+    "auth rollout",
+    "credential rotation",
+    "eu-west"
+  ],
+  "customer_sentiment": "executive escalation",
+  "requested_outcome": "Mitigate within SLA, provide customer-safe status, and decide whether to roll back auth rollout."
+}

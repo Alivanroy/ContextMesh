@@ -37,6 +37,8 @@ demo/raw_output.txt
 demo/mesh_output.txt
 demo/CONTEXT_PACKET.md
 benchmarks/requests/
+examples/enterprise_agentic/out/
+examples/enterprise_rag_office/out/
 
 # Misc
 *.log

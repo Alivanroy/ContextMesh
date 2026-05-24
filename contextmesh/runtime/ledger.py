@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
+import re
 
 from sqlmodel import select
 
+from contextmesh.runtime.context_candidates import CandidateInput, record_candidate
 from contextmesh.storage.db import LedgerEntry, create_db_and_tables, get_session
 
 
@@ -24,6 +26,75 @@ def _normalise_outcome_class(value: str | None) -> str:
         return "unknown"
     v = value.strip().lower()
     return v if v in VALID_OUTCOME_CLASSES else "unknown"
+
+
+_TOOL_REF = re.compile(r"^(?P<tool>[A-Za-z_][\w-]*)\((?P<target>.*)\)$")
+_FILE_TOOLS = {"read", "edit", "write", "notebookread", "notebookedit"}
+
+
+def _source_type_from_ref(ref: str) -> str:
+    prefix = ref.split(":", 1)[0].split("(", 1)[0].split(".", 1)[0].strip().lower()
+    if prefix in {
+        "file",
+        "symbol",
+        "command",
+        "tool_result",
+        "tool_output",
+        "tool_use",
+        "generated_packet",
+        "prompt_block",
+        "thread",
+        "result",
+        "turn",
+        "user_input",
+    }:
+        return prefix
+    if prefix in {"read", "edit", "write", "bash", "grep", "glob", "ls"}:
+        return "tool"
+    return "unknown"
+
+
+def _expanded_candidate_refs(refs: list[str]) -> list[tuple[str, str]]:
+    expanded: list[tuple[str, str]] = []
+    seen: set[str] = set()
+
+    def add(ref: str, reason: str) -> None:
+        if not ref or ref in seen:
+            return
+        seen.add(ref)
+        expanded.append((ref, reason))
+
+    for ref in refs:
+        add(ref, "selected by adapter context_refs")
+        match = _TOOL_REF.match(ref.strip())
+        if not match:
+            continue
+        tool = match.group("tool").lower()
+        target = match.group("target").strip().strip("'\"")
+        if not target:
+            continue
+        if tool in _FILE_TOOLS and ":" not in target:
+            add(f"file:{target}", f"derived from {match.group('tool')} tool target")
+        elif tool == "bash":
+            add(f"command:{target[:120]}", "derived from Bash tool target")
+    return expanded
+
+
+def _record_selected_candidates_from_refs(
+    *,
+    task_id: str,
+    step: int,
+    refs: list[str],
+) -> None:
+    for ref, reason in _expanded_candidate_refs(refs):
+        record_candidate(CandidateInput(
+            task_id=task_id,
+            step=step,
+            ref=ref,
+            status="selected",
+            source_type=_source_type_from_ref(ref),
+            reason=reason,
+        ))
 
 
 def record_step(
@@ -121,6 +192,11 @@ def record_event(event: dict) -> LedgerEntry:
         session.add(entry)
         session.commit()
         session.refresh(entry)
+        _record_selected_candidates_from_refs(
+            task_id=entry.task_id,
+            step=entry.step,
+            refs=refs,
+        )
         return entry
 
 

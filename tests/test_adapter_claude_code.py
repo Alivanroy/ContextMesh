@@ -35,6 +35,9 @@ def test_assistant_event_yields_one_step_with_usage():
     assert e["step"] == 1
     assert e["agent"] == "claude"
     assert "Read(x.py)" in e["context_refs"]
+    assert "tool_use:tu_1" in e["context_refs"]
+    assert "file:x.py" in e["context_refs"]
+    assert any(ref.startswith("prompt_block:assistant:") for ref in e["context_refs"])
     assert e["tokens_provider_input"] == 100
     assert e["tokens_cached_read"] == 50
     assert e["tokens_provider_output"] == 10
@@ -59,6 +62,12 @@ def test_pytest_tool_result_emits_avoidance_step():
     assert len(events) == 1
     assert events[0]["tokens_avoided"] > 0
     assert "tool_result:pytest" in events[0]["context_refs"]
+    assert "tool_result:tu_1" in events[0]["context_refs"]
+    assert any(ref.startswith("tool_output:pytest:") for ref in events[0]["context_refs"])
+    assert any(
+        ref.startswith("generated_packet:command_result:")
+        for ref in events[0]["context_refs"]
+    )
 
 
 def test_non_pytest_tool_result_is_silent():
@@ -82,6 +91,7 @@ def test_result_event_emits_final_step():
     e = events[0]
     assert e["decision"] == "final"
     assert e["outcome"] == "ok"
+    assert any(ref.startswith("prompt_block:result:") for ref in e["context_refs"])
     assert e["tokens_cached_read"] == 3000
     assert e["tokens_cached_write"] == 1000
 

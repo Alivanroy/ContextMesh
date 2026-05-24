@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import re
 
-from contextmesh.adapters.base import Adapter
+from contextmesh.adapters.base import Adapter, stable_text_ref
 from contextmesh.adapters.claude_code import _classify_pytest_outcome, _looks_like_pytest
 from contextmesh.runtime.ledger import estimate_tokens
 from contextmesh.wrappers.test_runner import distill_command_output
@@ -116,20 +116,29 @@ class AiderAdapter(Adapter):
 
         # Detect pytest within the body for avoidance crediting.
         avoided = 0
+        refs = ["user_input"]
+        user_text = str(turn.get("user_text") or "")
+        if user_text:
+            refs.append(stable_text_ref("prompt_block:user", user_text))
         for chunk in body.split("\n\n"):
             if _looks_like_pytest(chunk) and len(chunk) > 200:
                 packet = distill_command_output(["pytest"], 1, chunk)
+                refs.extend([
+                    "tool_output:pytest",
+                    stable_text_ref("tool_output:pytest", chunk),
+                    stable_text_ref("generated_packet:command_result", packet.model_dump_json()),
+                ])
                 avoided += max(
                     0,
                     estimate_tokens(chunk) - estimate_tokens(packet.model_dump_json()),
                 )
 
-        decision = (turn.get("user_text") or body[:200]).strip()
+        decision = (user_text or body[:200]).strip()
         event = {
             "task_id": self.task_id,
             "step": self._next_step(),
             "agent": self.agent,
-            "context_refs": ["user_input"],
+            "context_refs": refs,
             "context_text": decision,
             "tokens_provider_input": int(turn.get("tokens_sent") or 0),
             "tokens_provider_output": int(turn.get("tokens_received") or 0),

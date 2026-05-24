@@ -6,7 +6,14 @@ kwargs. ``contextmesh trace`` glues a subprocess + an adapter + the ledger.
 """
 from __future__ import annotations
 
+import hashlib
 from abc import ABC, abstractmethod
+
+
+def stable_text_ref(prefix: str, text: str, *, limit: int = 12) -> str:
+    """Return a stable ref for prompt/tool text without storing the text itself."""
+    digest = hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:limit]
+    return f"{prefix}:{digest}"
 
 
 class Adapter(ABC):

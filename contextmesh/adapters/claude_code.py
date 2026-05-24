@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from contextmesh.adapters.base import Adapter
+from contextmesh.adapters.base import Adapter, stable_text_ref
 from contextmesh.runtime.ledger import estimate_tokens
 from contextmesh.wrappers.test_runner import distill_command_output
 
@@ -90,6 +90,7 @@ class ClaudeCodeAdapter(Adapter):
         content = msg.get("content", []) or []
         usage = msg.get("usage", {}) or {}
 
+        refs: list[str] = []
         tool_calls: list[str] = []
         text_parts: list[str] = []
         for block in content:
@@ -98,15 +99,27 @@ class ClaudeCodeAdapter(Adapter):
             btype = block.get("type")
             if btype == "tool_use":
                 tool = block.get("name", "tool")
+                tool_id = str(block.get("id") or "")
                 inp = block.get("input", {})
                 target = ""
                 if isinstance(inp, dict):
                     target = inp.get("file_path") or inp.get("path") or inp.get("command", "")
-                tool_calls.append(f"{tool}({str(target)[:60]})" if target else tool)
+                tool_ref = f"{tool}({str(target)[:60]})" if target else str(tool)
+                tool_calls.append(tool_ref)
+                refs.append(tool_ref)
+                if tool_id:
+                    refs.append(f"tool_use:{tool_id}")
+                if target:
+                    if str(tool).lower() in {"read", "edit", "write", "notebookread", "notebookedit"}:
+                        refs.append(f"file:{target}")
+                    elif str(tool).lower() == "bash":
+                        refs.append(f"command:{str(target)[:120]}")
             elif btype == "text":
                 text_parts.append(block.get("text", ""))
 
         decision = " ".join(text_parts).strip()
+        if decision:
+            refs.append(stable_text_ref("prompt_block:assistant", decision))
         if not decision:
             decision = "; ".join(tool_calls) or "no-op"
 
@@ -114,7 +127,7 @@ class ClaudeCodeAdapter(Adapter):
             "task_id": self.task_id,
             "step": self._next_step(),
             "agent": self.agent,
-            "context_refs": tool_calls,
+            "context_refs": refs,
             "context_text": decision,
             "tokens_provider_input": int(usage.get("input_tokens", 0)),
             "tokens_cached_read": int(usage.get("cache_read_input_tokens", 0)),
@@ -133,13 +146,22 @@ class ClaudeCodeAdapter(Adapter):
         for block in content:
             if not isinstance(block, dict) or block.get("type") != "tool_result":
                 continue
+            tool_result_refs = ["tool_result"]
+            tool_use_id = str(block.get("tool_use_id") or "")
+            if tool_use_id:
+                tool_result_refs.append(f"tool_result:{tool_use_id}")
             text = _flatten_content(block.get("content"))
             if not text or not _looks_like_pytest(text):
                 continue
+            tool_result_refs.extend([
+                "tool_result:pytest",
+                stable_text_ref("tool_output:pytest", text),
+            ])
             classified = _classify_pytest_outcome(text)
             if classified is not None:
                 self._last_pytest_outcome = classified
             packet = distill_command_output(["pytest"], 0 if "passed in" in text else 1, text)
+            tool_result_refs.append(stable_text_ref("generated_packet:command_result", packet.model_dump_json()))
             raw_tokens = estimate_tokens(text)
             distilled_tokens = estimate_tokens(packet.model_dump_json())
             avoided = max(0, raw_tokens - distilled_tokens)
@@ -149,7 +171,7 @@ class ClaudeCodeAdapter(Adapter):
                 "task_id": self.task_id,
                 "step": self._next_step(),
                 "agent": self.agent,
-                "context_refs": ["tool_result:pytest"],
+                "context_refs": tool_result_refs,
                 "context_text": "",
                 "tokens_estimated": 0,
                 "tokens_avoided": avoided,
@@ -173,7 +195,10 @@ class ClaudeCodeAdapter(Adapter):
             "task_id": self.task_id,
             "step": self._next_step(),
             "agent": self.agent,
-            "context_refs": ["result"],
+            "context_refs": [
+                "result",
+                stable_text_ref("prompt_block:result", result_text) if result_text else "prompt_block:result:empty",
+            ],
             "context_text": result_text,
             "tokens_provider_input": int(usage.get("input_tokens", 0)),
             "tokens_cached_read": int(usage.get("cache_read_input_tokens", 0)),

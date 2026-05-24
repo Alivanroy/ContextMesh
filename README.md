@@ -14,7 +14,7 @@ matters most:
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
-[![tests: 80](https://img.shields.io/badge/tests-80%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
+[![tests: 115](https://img.shields.io/badge/tests-115%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
 [![version: v0.3.0](https://img.shields.io/badge/version-v0.3.0-blue.svg)](https://github.com/Alivanroy/ContextMesh)
 
 ---
@@ -73,6 +73,19 @@ contextmesh trace --task-id reset-bug --agent aider --silent \
 # 6. See where the tokens went
 contextmesh dashboard
 contextmesh metrics --task-id reset-bug --json
+contextmesh context record --task-id reset-bug --step 1 \
+    --ref symbol:verify_reset_token --status selected \
+    --source-type symbol --reason "directly covers failing test"
+contextmesh context record --task-id reset-bug --step 1 \
+    --ref file:docs/old-reset.md --status rejected \
+    --source-type doc --reason "stale reset-token flow"
+contextmesh context audit --task-id reset-bug
+contextmesh context schema inspection
+contextmesh inspect --task-id reset-bug
+contextmesh diff --left reset-bug-failed --right reset-bug-passed
+contextmesh export-langfuse --task-id reset-bug --trace-id lf-trace-id
+contextmesh export-otel --task-id reset-bug --service-name agent-platform
+contextmesh export-team --task-id reset-bug --target slack
 ```
 
 For workflows where you'd rather log each agent step manually, see
@@ -133,6 +146,15 @@ but they're not the headline anymore. The headline is what you can
 | `contextmesh init` | Create `.contextmesh/` and add it to `.gitignore` |
 | `contextmesh dashboard` | **Front door.** Render overview, per-task table, timeline, waste view |
 | `contextmesh metrics [--task-id]` | Print useful-context ratio + breakdown |
+| `contextmesh context record` | Record available, selected, or rejected context candidates |
+| `contextmesh context show --task-id TASK` | Show context candidates and selection reasons for a task |
+| `contextmesh context audit --task-id TASK` | Flag candidate selection risks such as low relevance, duplicate refs, large context, or sensitive refs |
+| `contextmesh context schema [NAME]` | Print JSON Schema for context intelligence payloads |
+| `contextmesh inspect --task-id TASK` | Inspect context quality, selected refs, recommendations, and Langfuse metadata |
+| `contextmesh diff --left A --right B` | Compare selected context and quality between two tasks |
+| `contextmesh export-langfuse --task-id TASK` | Emit a trace-ready Langfuse metadata payload |
+| `contextmesh export-otel --task-id TASK` | Emit an OTLP/JSON-shaped payload with context inspection spans and selected/rejected context events |
+| `contextmesh export-team --task-id TASK --target TARGET` | Emit Slack, Teams, Linear, Jira, or GitHub-ready JSON |
 | `contextmesh waste --threshold N` | List packet hashes sent across > N tasks |
 | `contextmesh ledger show \| record` | View / append ledger entries |
 | `contextmesh index [path]` | Walk repo, persist file hashes & symbols |
@@ -155,14 +177,17 @@ but they're not the headline anymore. The headline is what you can
 - **v0.5** — packet schema as a portable spec (JSON Schema + Protobuf)
   so other tools can write into the same ledger format. OpenTelemetry
   GenAI export path.
+- **v0.6** — context intelligence layer: inspect selected context, score
+  context quality, recommend fixes, and emit Langfuse-ready trace metadata.
 
 The earlier `plan.md` listed MCP proxy, RAG optimization, and a security
 layer. Those are deferred indefinitely — Anthropic's MCP Tool Search
 already solves the MCP token tax inside Claude Code, and the cost of
 splitting attention across four product surfaces is not worth it.
 
-See [plan.md](plan.md) and [docs/architecture.md](docs/architecture.md)
-for detail.
+See [plan.md](plan.md), [docs/architecture.md](docs/architecture.md),
+[docs/context_intelligence_v1.md](docs/context_intelligence_v1.md), and
+[docs/real_life_agent_scenarios.md](docs/real_life_agent_scenarios.md) for detail.
 
 ## Demo
 
@@ -172,6 +197,30 @@ bash demo/run_demo.sh
 
 Seeds a tiny repo with a buggy `verify_reset_token`, runs `pytest`
 through the distiller, and exports a focused packet bundle for the agent.
+
+## Enterprise Agentic Example
+
+```bash
+bash examples/enterprise_agentic/run_enterprise_demo.sh
+```
+
+Runs a deterministic enterprise support-risk agent for a regulated-finance
+customer escalation. The agent selects SLA, contract, runbook, and security
+context, rejects stale/sensitive context, produces a P1 mitigation plan, and
+exports ContextMesh inspection, audit, Langfuse, OpenTelemetry, Slack, and
+Jira payloads.
+
+## Enterprise Office RAG Example
+
+```bash
+bash examples/enterprise_rag_office/run_office_rag_demo.sh
+```
+
+Runs a real mixed-document RAG flow over generated Word `.docx` contract and
+security notes plus an Excel `.xlsx` SLA/risk workbook. The agent selects
+renewal-critical paragraphs and worksheet rows, rejects stale and irrelevant
+office context, produces a conditional approval, and exports ContextMesh
+inspection, audit, Langfuse, OpenTelemetry, Slack, and Jira artifacts.
 
 ## Benchmarks
 

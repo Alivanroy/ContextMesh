@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from contextmesh.adapters.base import Adapter
+from contextmesh.adapters.base import Adapter, stable_text_ref
 from contextmesh.adapters.claude_code import _classify_pytest_outcome, _looks_like_pytest
 from contextmesh.runtime.ledger import estimate_tokens
 from contextmesh.wrappers.test_runner import distill_command_output
@@ -71,7 +71,10 @@ class CodexCliAdapter(Adapter):
                 0 if classified == "passed" else 1
             )
             packet = distill_command_output(["pytest"], distill_exit_code, output)
+            packet_ref = stable_text_ref("generated_packet:command_result", packet.model_dump_json())
             avoided = max(0, estimate_tokens(output) - estimate_tokens(packet.model_dump_json()))
+        else:
+            packet_ref = ""
         if exit_code == 0:
             outcome = "ok"
         elif exit_code is not None or status in {"failed", "cancelled", "timed_out"}:
@@ -79,11 +82,18 @@ class CodexCliAdapter(Adapter):
         else:
             outcome = "unknown"
 
+        refs = [
+            f"command:{command[:120]}",
+            "tool_output:command_execution",
+            stable_text_ref("tool_output:command_execution", output) if output else "",
+            packet_ref,
+        ]
+
         return [{
             "task_id": self.task_id,
             "step": self._next_step(),
             "agent": self.agent,
-            "context_refs": [f"command:{command[:120]}"],
+            "context_refs": [ref for ref in refs if ref],
             "context_text": output[-1000:] if output else command,
             "tokens_estimated": 0,
             "tokens_avoided": avoided,
@@ -101,6 +111,8 @@ class CodexCliAdapter(Adapter):
         refs = ["turn.completed"]
         if self._thread_id:
             refs.append(f"thread:{self._thread_id}")
+        if self._last_message:
+            refs.append(stable_text_ref("prompt_block:agent_message", self._last_message))
 
         return [{
             "task_id": self.task_id,

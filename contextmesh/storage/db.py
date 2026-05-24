@@ -147,6 +147,22 @@ class LedgerEntry(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class ContextCandidate(SQLModel, table=True):
+    """Context that was available to a task, whether selected or rejected."""
+    __tablename__ = "context_candidate"
+
+    id: int | None = Field(default=None, primary_key=True)
+    task_id: str = Field(index=True)
+    step: int = Field(index=True)
+    ref: str = Field(index=True)
+    status: str = Field(index=True)
+    source_type: str = Field(default="unknown", index=True)
+    reason: str = ""
+    relevance_score: float | None = None
+    tokens_estimated: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class SeenPacket(SQLModel, table=True):
     """Tracks which packet hashes a given task/agent has already received.
 

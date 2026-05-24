@@ -4,6 +4,62 @@ All notable changes to ContextMesh are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- **Context Intelligence V1**: inspect recorded runs with
+  `contextmesh inspect --task-id TASK`, including selected context,
+  rejected context, context quality score, recommendations, and
+  Langfuse-ready metadata.
+- **Context candidates**: new `contextmesh context record/show` commands and
+  persistent `context_candidate` table for `available`, `selected`, and
+  `rejected` context with source type, relevance score, token estimate, and
+  selection reason.
+- **Automatic candidate population** from adapter `context_refs` during
+  `contextmesh trace`, including derived `file:` and `command:` candidates
+  from tool-shaped refs such as `Read(app.py)` and `Bash(pytest tests)`.
+- **Finer-grained adapter refs** for tool-use ids, tool-result ids, hashed
+  tool output, distilled command-result packets, and prompt blocks.
+- **Context diff**: `contextmesh diff --left A --right B` compares selected
+  context, quality score, token deltas, duplicate refs, and recommendations
+  between two tasks.
+- **Context audit**: `contextmesh context audit --task-id TASK` flags
+  low-relevance selected context, high-relevance rejected context,
+  duplicated selected refs, oversized selected context, and
+  sensitive-looking selected context.
+- **Langfuse payload export**: `contextmesh export-langfuse --task-id TASK`
+  emits trace-ready metadata and tags without adding a runtime Langfuse
+  dependency.
+- **OpenTelemetry payload export**: `contextmesh export-otel --task-id TASK`
+  emits an OTLP/JSON-shaped context-inspection span with selected/rejected
+  context events for OTel-native observability stacks.
+- **Team payload export**: `contextmesh export-team --task-id TASK --target`
+  emits no-network JSON for Slack, Microsoft Teams, Linear, Jira, and GitHub.
+- **Context Intelligence JSON Schemas**:
+  `contextmesh context schema [candidate|inspection|diff|audit|langfuse-export|all]`.
+- Real-life agent scenario documentation covering command-first, tool-use,
+  and chat-history agent patterns plus team integration workflows.
+- **Enterprise agentic example**: runnable regulated-finance support-risk
+  agent under `examples/enterprise_agentic/` that records selected/rejected
+  context with ContextMesh and emits inspection, audit, Langfuse, Slack, and
+  Jira artifacts.
+- **Enterprise Office RAG example**: runnable mixed-document renewal agent
+  under `examples/enterprise_rag_office/` that generates Word `.docx` and
+  Excel `.xlsx` source files, retrieves paragraphs and worksheet rows,
+  rejects stale/irrelevant office context, and emits inspection, audit,
+  Langfuse, Slack, and Jira artifacts.
+
+### Tests
+
+- Added schema validation for emitted Context Intelligence payloads.
+- Added an end-to-end CLI workflow test covering trace replay, candidates,
+  audit, inspect, diff, schema export, and Langfuse export.
+- Added regression coverage for the enterprise Office RAG example, including
+  generated source files, selected/rejected context, and exported schemas.
+- Added OpenTelemetry export coverage for runtime payloads, CLI output, schemas,
+  and enterprise example artifacts.
+
 ## v0.3.0 — 2026-05-16
 
 ### Added
