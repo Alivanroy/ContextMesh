@@ -1,11 +1,11 @@
-# Hacker News — Show HN
+# Hacker News — Show HN (v0.4.0)
 
 ## Submission
 
-**Title** (71 chars — HN limit is 80):
+**Title** (76 chars):
 
 ```
-Show HN: ContextMesh – see where your coding agent's tokens actually go
+Show HN: ContextMesh – diff your failed agent run against your passed one
 ```
 
 **URL:**
@@ -14,89 +14,129 @@ Show HN: ContextMesh – see where your coding agent's tokens actually go
 https://github.com/Alivanroy/ContextMesh
 ```
 
-Submit Tuesday–Thursday, ~8:00–9:30am US Eastern. Avoid Mon/Fri and
-weekends. Do not submit and walk away — be at the keyboard for the first
-3 hours to answer comments.
+Submit Tuesday–Thursday, 8:00–9:30am US Eastern. Stay at the keyboard
+for the first 3 hours to answer comments. Don't reply to downvotes;
+reply to questions.
 
 ---
 
 ## First comment (post immediately after submitting)
 
-ContextMesh is a local CLI that wraps a coding agent (`claude`, `codex`,
-`aider`) and logs every step into a SQLite ledger — token volume, cache
-usage, and whether the task's tests ended up passing.
+ContextMesh is a local CLI that records coding-agent runs into a typed
+SQLite ledger — token volume, cache usage, which test ended up passing.
+The v0.4 release adds something most observability tools don't: it
+records what the agent *rejected* with a reason, and lets you diff two
+runs.
 
-The thing that started it: most agent-observability tools collapse the
-four token columns Anthropic prices *differently* — uncached input
-(1.0×), cache read (0.1×), cache write (1.25×), output — into one "input
-tokens" number. Langfuse currently goes further and double-counts the
-cached tokens (langfuse/langfuse#12306, open since Q1). If your dashboard
-does that, you genuinely cannot tell whether an agent is spending well.
+The demo:
 
-ContextMesh keeps the four columns separate, never summed, and ties them
-to an outcome. The headline metric is deliberately strict:
+```
+$ contextmesh diff --left reset-bug-failed --right reset-bug-passed
+Context diff reset-bug-failed -> reset-bug-passed
+  outcome: regressed -> passed
+  quality: 39.0% -> 75.0% (delta +36.0%)
+  billed token delta: -11,540
 
-  useful_context_ratio = tokens spent on tasks that ended `passed`
-                       / tokens spent on all tasks
+  Only left                  Shared                   Only right
+  Read(tests/test_reset.py)  Bash(pytest …)           prompt_block:assistant…
+  file:tests/test_reset.py   Edit(src/auth/reset.py)  prompt_block:result:…
+  generated_packet:command…  …
+  prompt_block:result:a2…
 
-A task that doesn't finish contributes zero useful tokens. It rewards
-finishing, not trying.
+Recommendations
+  - Promote refs that appear only in the passed run; they are likely
+    missing evidence.
+  - Review refs that appear only in the failed run; they may be stale,
+    noisy, or misleading.
+```
 
-What's actually real right now, and what isn't, because HN will check:
+That's two real fixtures from `tests/fixtures/` (a real-shape Claude
+Code stream-json and its passing counterpart). The diff happens against
+a `ContextCandidate` table that records every context decision as
+`available | selected | rejected` with a `source_type`, `reason`, and
+optional `relevance_score`.
 
-- Three adapters work (Claude Code stream-json, Codex CLI exec --json,
-  Aider chat history). ~120–160 LoC each.
-- The benchmark is fixture-scale — 2 tasks × 3 agents. Every row in the
-  leaderboard is labelled `captured-live` / `synthetic-real-shape` /
-  `handcrafted` so it never overstates itself. The `captured-live` rows
-  are real `aider + ollama llama3` runs. v0.4 is the real benchmark.
-- It's alpha, MIT, one contributor, no users yet. 80 tests, CI on
-  3.10–3.12. No telemetry, no cloud account, no SaaS.
+The quality score on the left is composite, not opaque. Breakdown is
+shipped in the output:
 
-It is not trying to be LangSmith/Langfuse — those are full app
-observability suites. This is narrow on purpose: measure which
-coding-agent context produced verified work, and what it cost.
+  score_breakdown: outcome=10.0%, avoidance=0.1%, evidence=100.0%, reuse=100.0%
+
+Weights: outcome 40%, avoidance 25%, evidence 20%, reuse 15%. Argue with
+the components or the weights — they're public and reproducible.
+
+The audit is the second-most-interesting bit. Real run, real finding:
+
+```
+$ contextmesh context audit --task-id reset-bug-failed
+  warn      low_relevance_selected       2  symbol:verify_legacy_token
+            Selected despite relevance 0.15; review retrieval or selection policy.
+  error     sensitive_selected_context   2  symbol:verify_legacy_token
+            Selected context looks sensitive; verify masking or policy approval.
+```
+
+What's actually real right now, since HN will check:
+
+- Three working adapters: Claude Code (`stream-json`), Codex CLI
+  (`exec --json`), Aider (`.aider.chat.history.md`). Real captured
+  fixtures, not synthesized.
+- Five new CLI commands in v0.4: `inspect`, `diff`,
+  `context record/show/audit/schema`, `export-langfuse`, `export-otel`,
+  `export-team`.
+- The Langfuse export is metadata-only (designed to attach to an
+  existing trace via `trace.update(metadata=...)`). ContextMesh
+  deliberately does not own the trace store. Same shape for the OTel
+  OTLP/JSON export.
+- 119 tests, ruff clean, CI on Python 3.10/3.11/3.12. Alpha, MIT, one
+  contributor. No telemetry, no SaaS.
+
+What it isn't trying to be: LangSmith / Langfuse / Phoenix. Those are
+full app-observability suites and they win on dashboards / alerting /
+evals. ContextMesh is narrow on purpose — measure which context
+produced verified work, explain what should change, and hand the
+metadata to whichever trace backend you already run.
+
+Two enterprise examples in `examples/` show the candidate / diff /
+audit story generalizes to non-coding agents too — a support-risk
+classifier and a RAG-over-office-docs agent.
 
 Repo: https://github.com/Alivanroy/ContextMesh
-Metric definition: docs/metrics.md
-Market positioning vs the incumbents: benchmarks/market_comparison_2026-05-16.md
-
-Happy to be told the metric is wrong — the strict pass-or-zero rule is
-the most arguable design decision and I'd rather hear it here.
+Design doc: docs/context_intelligence_v1.md
+Most arguable design decision: the strict `passed-or-zero`
+`useful_context_ratio` (docs/metrics.md has the rejected softer
+variants). Tell me it's wrong here.
 
 ---
 
 ## Pre-written replies to likely comments
 
-**"Isn't this just Langfuse / LangSmith?"**
-> Those trace any LLM app and are far more mature for production
-> dashboards, evals, and alerting. ContextMesh is local-first and
-> narrow: it only does coding agents, and its primary metric is
-> outcome-coupled (did the context produce a passing task) rather than
-> latency/cost-only. It's a meter, not a suite. The market table in the
-> repo lays out where it's behind — which is most places.
+**"Isn't this just Langfuse with extra steps?"**
+> The product surfaces don't overlap: Langfuse stores traces;
+> ContextMesh stores *context decisions* (selected/rejected/available
+> with reasons) and computes quality from outcome. The
+> `export-langfuse` command emits a metadata payload designed to
+> attach to a Langfuse trace via `trace.update()`. Complementary by
+> design.
 
-**"Anthropic prompt caching already solves repeated context."**
-> It does, for the prefix, inside Anthropic. ContextMesh's compression
-> is additive — it shrinks what's *in* the prefix (de-dupes symbols the
-> agent already saw this task) and the cache columns show Anthropic's
-> part separately. Also: caching doesn't tell you whether the context
-> was *useful*, only that it was cheap to resend.
+**"The `pass-or-zero` rule is too strict."**
+> Agreed it's strict, and the softer variants (partial credit for
+> `unchanged`, step-level scoring) are documented and rejected in
+> `docs/metrics.md` because they're all gameable. Open to a better
+> rule — the metric implementation is 2 lines.
 
-**"pass-or-zero is too strict / a passing task can still ship a hack."**
-> Agreed it's strict, and it deliberately doesn't measure code quality —
-> only spend efficiency. The softer variants (partial credit for
-> `unchanged`, step-level credit) are documented and rejected in
-> docs/metrics.md because they're all gameable. Open to a better rule.
+**"How do you get `relevance_score` for `context audit` to work?"**
+> Recorded by whoever's making the selection decision — usually your
+> RAG reranker or retrieval layer. The audit is a check, not a
+> retriever; it doesn't compute scores, it acts on them. If you don't
+> have scores, the relevance-based findings just don't fire; duplicate
+> / large / sensitive findings still work.
 
-**"Why no real Claude benchmark numbers?"**
-> Honest answer: the headline `claude-code` rows are
-> `synthetic-real-shape` — the stream schema and usage columns are real,
-> the magnitudes are demo-scale. A live authenticated multi-task Claude
-> run is the v0.4 blocker. The Aider rows are genuinely captured-live.
+**"Why not OpenInference?"**
+> The OTel export uses OTLP/JSON spans with `gen_ai.*`-style
+> attributes; adding OpenInference semantic conventions is one
+> attribute-key change. Open issue or PR if you want it.
 
-**"Python-only indexing is limiting."**
-> The trace/ledger/metric layer is language-agnostic — it parses the
-> agent's stream, not your code. Only the optional `expand`/focus
-> packet path uses tree-sitter and is Python-only today. TS/Go are
-> roadmap.
+**"Tree-sitter-python only — what about other languages?"**
+> The trace/ledger/metric/candidate/audit layer is
+> language-agnostic — it parses the agent's stream, not your code. Only
+> the optional symbol-expansion path uses tree-sitter. The Codex
+> adapter has been smoke-tested fine against non-Python repos.

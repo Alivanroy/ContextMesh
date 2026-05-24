@@ -1,97 +1,122 @@
-# X / Twitter — launch thread
+# X / Twitter — launch thread (v0.4.0)
 
-7 tweets. Post the thread in one sitting. Tweet 1 must stand alone — most
-people only see that one. Attach a screenshot of `contextmesh dashboard`
-to tweet 1 and the leaderboard table to tweet 5 (grab both from a real
-terminal run before posting). Repo link goes in the LAST tweet, not the
-first — links in tweet 1 suppress reach.
+8 tweets. Post in one sitting. Tweet 1 must stand alone — most people
+only see that. Attach a screenshot of the `contextmesh diff` output to
+tweet 1 and the `context audit` output to tweet 5 (grab both from a
+real terminal run; the exact commands are in `docs/launch_post.md`).
 
-Hashtags are noise; skip them. If a larger account in the agent/LLM
-space is reachable, a reply-with-link after posting beats hashtags.
+Repo link goes in the LAST tweet, not the first — links in tweet 1
+suppress reach. No hashtags.
+
+If a larger account in the agent/LLM space is reachable, reply-with-link
+after posting beats every hashtag.
 
 ---
 
-## Tweet 1 — hook (attach: dashboard screenshot)
+## Tweet 1 — hook (attach: diff screenshot)
 
-Your coding agent's dashboard says "input tokens: 43,118."
+Your agent failed. You re-ran it. It passed.
 
-Anthropic charges 4 different rates for those tokens — uncached, cache
-read, cache write, output. Collapse them into one number and you can't
-tell if your agent is spending well or burning money.
+You don't know why.
 
-ContextMesh keeps them separate. 🧵
+Most agent observability tools show what happened. ContextMesh shows
+what was *different* between the two runs.
+
+🧵
 
 ---
 
 ## Tweet 2
 
-It wraps any coding agent — Claude Code, Codex CLI, Aider — and parses
-its tool-call stream into a local SQLite ledger.
+`contextmesh diff --left failed-run --right passed-run`
 
-One row per turn. Four token columns, never summed. Plus: did the task's
-tests actually pass?
+Outputs three columns: refs only the failed run looked at, refs only
+the passed run looked at, refs both shared.
 
-No cloud account. No telemetry. One CLI.
+Plus a remediation list: "promote the only-right refs, review the
+only-left ones."
+
+The thing you'd otherwise hand-diff in a notebook.
 
 ---
 
 ## Tweet 3
 
-The bug that started it:
+It works because ContextMesh records context *decisions*, not just
+context.
 
-Langfuse double-counts Anthropic cache tokens (langfuse#12306, open
-since Q1). Cached input gets counted once by the OTel convention, then
-again when the cache fields are added on top.
+Every candidate goes in with a status:
+• `selected` — agent saw it
+• `rejected` — agent skipped it, with a reason
+• `available` — system considered it
 
-If your cost graph does this, it's ~2× wrong.
+Rejection-with-reason is what most observability tools never capture.
 
 ---
 
 ## Tweet 4
 
-The headline metric is one strict number:
+The quality score is composite, not a black box:
 
-useful_context_ratio = tokens on tasks that ended `passed`
-                     / tokens on all tasks
+  outcome   40%
+  avoidance 25%
+  evidence  20%
+  reuse     15%
 
-A task that doesn't finish scores zero. No partial credit.
-
-It measures whether your spend produced working code — not just how big
-the spend was.
+Every export ships the breakdown. Argue with the weights — the
+implementation is 2 lines of Python.
 
 ---
 
-## Tweet 5 — proof (attach: leaderboard screenshot)
+## Tweet 5 — proof (attach: audit screenshot)
 
-It runs a cross-agent leaderboard. Every row is labelled by how real the
-data is — `captured-live`, `synthetic-real-shape`, `handcrafted` — so it
-never overstates itself.
+`contextmesh context audit` runs explainable policy checks:
 
-The Aider rows are real `aider + ollama llama3` runs fixing a real bug.
+`warn   low_relevance_selected`
+`error  sensitive_selected_context`
+`warn   high_relevance_rejected`
+`warn   duplicate_selected_ref`
+
+The checks you'd otherwise build on top of generic observability.
+Shipped as audit rows you can grep, alert, or block on.
 
 ---
 
 ## Tweet 6
 
-Two compression tricks, both measured, both additive to Anthropic's
-prompt cache:
+Designed to be complementary, not competitive:
 
-• per-task cache: a symbol the agent already saw → a 12-token reference
-• critical-path focus: a failing test pins the buggy function's body
+`contextmesh export-langfuse` → metadata payload for
+`trace.update(metadata=...)`
 
-On a 3-turn refactor: 39% fewer input tokens.
+`contextmesh export-otel` → OTLP/JSON spans for Phoenix, Datadog, your
+collector
+
+Langfuse keeps the trace. ContextMesh keeps the context quality.
 
 ---
 
-## Tweet 7 — CTA (link goes here)
+## Tweet 7
 
-Alpha. MIT. One contributor. 80 tests, CI on Python 3.10–3.12.
+Three adapters today, all parsing real captured streams:
 
-It's not trying to be LangSmith — it's the meter you put on top of your
-agent. Narrow on purpose.
+• Claude Code (`stream-json`)
+• Codex CLI (`exec --json`)
+• Aider (`.aider.chat.history.md`)
 
-Tear the metric apart, wire your agent in, or just watch where your
-tokens go:
+Two enterprise examples in the repo prove the candidate/diff/audit
+story isn't coding-agent-only.
+
+---
+
+## Tweet 8 — CTA (link goes here)
+
+Alpha. MIT. One contributor. 119 tests, CI on Python 3.10–3.12.
+
+Local SQLite, no SaaS, no telemetry, no cloud account.
+
+Diff a failed run, audit its context, attach the metadata to whatever
+you already run:
 
 github.com/Alivanroy/ContextMesh
 
@@ -99,9 +124,9 @@ github.com/Alivanroy/ContextMesh
 
 ## Notes
 
-- If tweet 1 gets zero traction in ~2h, the hook is wrong — don't post
-  the rest into a void. Re-draft tweet 1 and try once more another day.
-- Reply to every substantive reply for the first few hours; the
-  algorithm rewards thread-author engagement.
-- A short follow-up the next day ("biggest piece of feedback so far
-  was X, here's what I changed") extends the life of the launch.
+- If tweet 1 gets zero engagement in ~2h, the hook is wrong — don't
+  spam the rest into a void. Wait a day, re-draft tweet 1, retry once.
+- Reply to every substantive reply for the first 3 hours; the algorithm
+  rewards thread-author engagement.
+- Best follow-up the next day: "biggest feedback so far was X, here's
+  what I changed" extends the launch.

@@ -4,6 +4,56 @@ All notable changes to ContextMesh are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.4.0 — 2026-05-24
+
+### Added — Context Intelligence v1
+
+A new product layer on top of the v0.2/v0.3 ledger. ContextMesh now
+records context *decisions* (not just usage) and explains them.
+
+- **`ContextCandidate`** table — every context decision recorded as
+  `available | selected | rejected` with `source_type`, `reason`, and
+  optional `relevance_score` / `tokens_estimated`. Adapters wire this
+  up automatically from tool-call streams; `contextmesh context record`
+  appends manually.
+- **`contextmesh inspect`** — composite `context_quality_score` (40%
+  outcome + 25% avoidance + 20% evidence + 15% reuse) with the full
+  breakdown in every export. Recommendations engine emits remediation
+  steps when refs are missing, runs failed, or duplicates appeared.
+- **`contextmesh diff`** — compare two recorded tasks. Returns refs
+  only-left / shared / only-right plus quality delta plus
+  failed-vs-passed remediation list. The headline workflow.
+- **`contextmesh context audit`** — explainable policy checks over
+  recorded candidates. Codes: `duplicate_selected_ref`,
+  `low_relevance_selected`, `high_relevance_rejected`,
+  `large_selected_context`, `sensitive_selected_context`,
+  `no_rejected_candidates`.
+- **`contextmesh context schema`** — exposes JSON Schemas for every
+  context-intelligence payload: candidate, inspection, diff, audit,
+  langfuse-export, otel-export.
+- **`contextmesh export-langfuse`** — metadata-only payload designed
+  to attach via `trace.update(metadata=...)`. ContextMesh is
+  complementary to Langfuse, not a competitor.
+- **`contextmesh export-otel`** — OTLP/JSON span shaped for Phoenix /
+  Datadog / internal OTel collectors. No-network by design; production
+  submission stays in the caller's telemetry pipeline.
+- **`contextmesh export-team`** — generic no-network payload for
+  internal dashboards.
+- **Adapter enrichment** — Claude Code, Codex CLI, and Aider now emit
+  fine-grained refs from their streams: `tool_use:<id>`,
+  `tool_result:<id>`, `tool_result:pytest`,
+  `tool_output:<kind>:<hash>`, `generated_packet:command_result:<hash>`,
+  `prompt_block:<kind>:<hash>`. Stable hashes; raw text never copied
+  into the ledger. Tool-shaped refs (`Read(app.py)`,
+  `Bash(pytest tests)`) get derived candidates (`file:app.py`,
+  `command:pytest tests`) so audit and diff have something to match on.
+- **Two enterprise example apps** demonstrating the candidate /
+  diff / audit story generalizes to non-coding agents:
+  `examples/enterprise_agentic/` (support-risk classifier) and
+  `examples/enterprise_rag_office/` (RAG over Office-style docs).
+- 39 new tests (119 total, was 80). ruff clean. CI green on Python
+  3.10 / 3.11 / 3.12.
+
 ## Unreleased
 
 ### Added

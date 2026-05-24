@@ -1,132 +1,209 @@
-# Stop adding cache savings to your token budget twice
+# Diff your failed agent run against your passed one
 
-> The four numbers your agent observability tool should show you
-> separately — and a local CLI that does.
+> A local CLI that records what your coding agent *selected*, what it
+> *rejected*, and tells you what was different the time it worked.
 
-There's a [bug in Langfuse](https://github.com/langfuse/langfuse/issues/12306)
-that's been open since Q1: when you trace an Anthropic call that hits the
-prompt cache, the cached tokens get double-counted. The OpenTelemetry
-GenAI semantic convention says `gen_ai.usage.input_tokens` is *total*
-input (cached + uncached). pydantic-ai follows that convention. Langfuse
-then adds the cache fields again on top. The graph says you're burning
-twice the tokens you actually are.
+Coding agents fail. Then the same agent passes on a re-run. The
+difference is almost never the model — it's the context that got
+selected. But the existing observability tools (Langfuse, LangSmith,
+Phoenix, Helicone) all stop at "here's the trace." They show you what
+happened. They do not show you *why* one run worked and the other
+didn't.
 
-This isn't a Langfuse-specific story. Most agent observability tools
-collapse the four columns Anthropic charges *differently* into one
-"input tokens" number. That's a problem because **prompt caching changes
-the cost calculation by an order of magnitude.** A token read from a
-5-minute cache costs 0.1× the base rate. A token written into the cache
-costs 1.25×. Collapse those into one number and you can't tell whether an
-agent is spending well or paying through the nose.
-
-[ContextMesh](https://github.com/Alivanroy/ContextMesh) is a local CLI
-that doesn't collapse them.
-
-## The four numbers, kept separate
-
-ContextMesh wraps a coding agent — `claude`, `codex`, `aider`, or a
-home-grown loop — and parses its tool-call stream into a typed SQLite
-ledger. As of v0.3.0, three adapters ship:
-
-- **Claude Code** — parses `claude --output-format stream-json` into one
-  row per assistant turn, plus a synthetic row whenever a `tool_result`
-  looked like distillable test output.
-- **Codex CLI** — parses `codex exec --json` JSONL (`item.completed`
-  shell events, `turn.completed` usage).
-- **Aider** — parses `.aider.chat.history.md`, picks up the
-  `Tokens: … sent, … received` summary lines, detects pytest pass/fail
-  in the tool blockquotes.
-
-Every ledger row keeps these columns *separate*, never summed:
-
-| Column | What it is | Anthropic price |
-|---|---|---|
-| `tokens_provider_input` | Uncached input | 1.0× |
-| `tokens_cached_read` | Cache hit | 0.1× |
-| `tokens_cached_write` | Cache write | 1.25× |
-| `tokens_provider_output` | Model output | output rate |
-| `tokens_avoided` | Saved on top by ContextMesh's own compression | — |
-
-`contextmesh dashboard` renders them per task. `contextmesh metrics
---json` emits them for scripting. Each row also carries an
-auto-detected `outcome_class` — `passed | regressed | unchanged |
-aborted | unknown` — set from pytest output seen in the trace.
-
-## One number to track over time
-
-Underneath the columns is a deliberately strict metric:
-
-> **`useful_context_ratio` = (tokens spent on tasks whose final
-> `outcome_class` was `passed`) / (tokens spent on all tasks)**
-
-A task whose final outcome is anything other than `passed` contributes
-zero useful tokens. The metric rewards *finishing*, not trying, and
-penalises wasted spend completely. It's token-weighted across tasks, so
-a 100k-token failure counts more than a 200-token success. Full
-definition, and the softer variants considered and rejected, in
-[docs/metrics.md](https://github.com/Alivanroy/ContextMesh/blob/v0.3.0/docs/metrics.md).
-
-v0.3.0 adds the cost-weighted companion: supply per-million-token prices
-via env vars and the ledger produces `useful_cost_ratio`,
-`wasted_cost_usd`, and `cost_per_passed_task_usd`. Token volume stays the
-source of truth; dollar figures are explicit and reproducible
-([docs/cost_metrics.md](https://github.com/Alivanroy/ContextMesh/blob/v0.3.0/docs/cost_metrics.md)).
-
-## Two compression mechanisms, measured
-
-ContextMesh's ledger is the output of two optimizations applied before
-the agent sees the prompt:
-
-1. **Per-task seen-cache.** Symbol packets the agent already received
-   this task become ~12-token `symbol_ref` shells next turn. On a 3-turn
-   refactor of ContextMesh's own repo this cut cumulative input by
-   **39.3%** (35,124 → 21,305 tokens).
-2. **Critical-path focus.** When the agent receives a `test_failure`,
-   ContextMesh inlines the body of the failing symbol and *pins* it, so
-   the seen-cache can't downgrade it on the next turn — the agent never
-   loses the one piece of context that matters while looping on a bug.
-
-Both are *additive* to Anthropic's prompt cache: Anthropic caches the
-prefix, ContextMesh shrinks what's in it. The cache columns show the
-first; the `avoided` column shows the second.
-
-## The cross-agent leaderboard
-
-`benchmarks/harness.py` runs N tasks × M agents and writes one row per
-pair. Every row is labelled by fixture provenance so the table never
-overstates how real a number is:
+[ContextMesh](https://github.com/Alivanroy/ContextMesh) v0.4 records
+agent runs into a typed local ledger, then lets you do this:
 
 ```
-Task               Agent        Source                Outcome    Input  CacheR  CacheW  Output  Useful
-reset-bug-failing  claude-code  synthetic-real-shape  regressed  7,260  18,240   3,600     680    0.0%
-reset-bug-failing  aider        captured-live         regressed  1,580       0       0     180    0.0%
-reset-bug-failing  codex-cli    handcrafted           regressed 16,640   8,192       0      97    0.0%
-reset-bug-fixed    claude-code  synthetic-real-shape  passed     5,400  12,160       0     240  100.0%
-reset-bug-fixed    aider        captured-live         passed     1,309       0       0     160  100.0%
-reset-bug-fixed    codex-cli    captured-live         passed     8,893  21,760       0      61  100.0%
+$ contextmesh diff --left reset-bug-failed --right reset-bug-passed
+Context diff reset-bug-failed -> reset-bug-passed
+  outcome: regressed -> passed
+  quality: 39.0% -> 75.0% (delta +36.0%)
+  billed token delta: -11,540
+  avoided token delta: -20
+  duplicate ref delta: +0
+
+                              Context ref changes
+  Only left                  Shared                   Only right
+  Read(tests/test_reset.py)  Bash(pytest …)           prompt_block:assistant…
+  file:tests/test_reset.py   Edit(src/auth/reset.py)  prompt_block:assistant…
+  generated_packet:command…  command:pytest …        prompt_block:result:19…
+  prompt_block:assistant:…   file:src/auth/reset.py
+  …                          result
+                             tool_use:tu_1
+                             tool_use:tu_2
+
+Recommendations
+  - Promote refs that appear only in the passed run; they are likely
+    missing evidence.
+  - Review refs that appear only in the failed run; they may be stale,
+    noisy, or misleading.
 ```
 
-`captured-live` rows are real agent runs — the Aider rows from a real
-`aider --model ollama_chat/llama3:latest` session against a buggy
-`verify_reset_token`. The current market-positioning snapshot vs
-LangSmith / Langfuse / Phoenix / Helicone / Braintrust / MLflow is in
-[benchmarks/market_comparison_2026-05-16.md](https://github.com/Alivanroy/ContextMesh/blob/v0.3.0/benchmarks/market_comparison_2026-05-16.md).
+That's the headline workflow. The rest of this post is what makes it
+work.
 
-## What it is, and what it isn't
+## Context candidates: selected, rejected, *and why*
 
-**It is:** a local-first observability layer for coding-agent context
-spend. A strict metric, three adapters, a terminal dashboard, a
-cross-agent harness. 80 tests, MIT, no telemetry, no cloud account, no
-embeddings, no SaaS. SQLite and one CLI.
+Most observability tools record what the agent received. ContextMesh
+also records what the agent could have received and didn't, with a
+reason. Every context decision lands in a `ContextCandidate` row with
+three possible statuses:
 
-**It isn't:** a competitor to Aider, Claude Code, Cursor, or Repomix —
-it's the *meter* on top of them. It isn't trying to be LangSmith or
-Langfuse either; those are full app-observability suites. ContextMesh is
-narrow on purpose: *measure which coding-agent context produced verified
-work, and what it cost.*
+```bash
+contextmesh context record --task-id reset-bug --step 1 \
+  --ref symbol:verify_reset_token --status selected \
+  --source-type symbol --reason "directly covers failing test"
 
-Honest status: alpha. The benchmark is still fixture-scale; v0.4 is the
-real multi-task benchmark. OpenCode and Cursor adapters are next.
+contextmesh context record --task-id reset-bug --step 1 \
+  --ref file:docs/old-reset-policy.md --status rejected \
+  --source-type doc --reason "stale reset-token flow, superseded by 2026 policy"
+```
+
+When you `diff` a failed run against a passed one, the `Only left` /
+`Only right` columns are the actual difference your retrieval / agent
+loop made. The recommendations call out which side to imitate.
+
+Adapters wire this up automatically. Tracing a Claude Code, Aider, or
+Codex CLI session populates candidates from the agent's tool-call
+stream — `Read(app.py)` becomes both the raw tool ref and a derived
+`file:app.py`; `Bash(pytest tests)` becomes both the tool ref and
+`command:pytest tests`. The candidate model is the same whether
+ContextMesh built it from a stream or a human typed it.
+
+## Context audit: explainable policy checks
+
+`contextmesh context audit` runs explainable checks against recorded
+candidates and reports findings with codes you can grep, alert, or block
+on:
+
+```
+$ contextmesh context audit --task-id reset-bug-failed
+                  Context audit for reset-bug-failed
+  Severity  Code                          Step  Ref                            Message
+  warn      low_relevance_selected        2     symbol:verify_legacy_token     Selected despite relevance 0.15;
+                                                                                review retrieval or selection policy.
+  error     sensitive_selected_context    2     symbol:verify_legacy_token     Selected context looks sensitive;
+                                                                                verify masking or policy approval.
+```
+
+The codes are: `duplicate_selected_ref`, `low_relevance_selected`,
+`high_relevance_rejected`, `large_selected_context`,
+`sensitive_selected_context`, `no_rejected_candidates`. Each one is a
+small policy check you might otherwise hand-implement on top of a
+generic observability platform. ContextMesh ships them as audit rows.
+
+## Quality score with an actual breakdown
+
+The headline metric is composite, not a black box. `contextmesh inspect`
+shows the score and the four components it came from:
+
+```
+$ contextmesh inspect --task-id reset-bug-failed
+Context inspection task=reset-bug-failed
+  outcome: regressed
+  steps: 5
+  agents: claude-code
+  context_quality_score: 39.0%
+  useful_context_ratio: 0.0%
+  score_breakdown: outcome=10.0%, avoidance=0.1%, evidence=100.0%, reuse=100.0%
+```
+
+Weights are explicit: outcome 40%, avoidance 25%, evidence 20%, reuse
+15%. Argue with the weights. Argue with the components. They're public
+and reproducible — every JSON export carries the full breakdown.
+
+## Designed to be complementary, not competitive
+
+ContextMesh deliberately does not own the trace store. If you already
+run Langfuse, OTel collectors, Phoenix, or an internal pipeline,
+ContextMesh emits the metadata to attach to them.
+
+**Langfuse trace metadata payload:**
+
+```
+$ contextmesh export-langfuse --task-id reset-bug-passed --trace-id lf-trace-abc123
+{
+  "trace_id": "lf-trace-abc123",
+  "metadata": {
+    "contextmesh": {
+      "version": "0.4.0",
+      "task_id": "reset-bug-passed",
+      "context_quality_score": 0.75,
+      "useful_context_ratio": 1.0,
+      "tokens_billed": 6020,
+      "tokens_avoided": 0,
+      "duplicate_ref_sends": 0,
+      "selected_context_refs": [...],
+      "rejected_context_refs": [],
+      "recommendations": [...]
+    }
+  },
+  "tags": ["contextmesh", "context_quality:0.75", "outcome:passed"]
+}
+```
+
+**OpenTelemetry OTLP/JSON span:**
+
+```
+$ contextmesh export-otel --task-id reset-bug-passed --service-name agent-platform
+{
+  "resourceSpans": [{
+    "resource": {"attributes": [{"key": "service.name", ...}]},
+    "scopeSpans": [{
+      "scope": {"name": "contextmesh.runtime.otel_export", "version": "0.4.0"},
+      "spans": [{
+        "traceId": "5cb73524c10d22614ea6954f5e168481",
+        "spanId": "cd9f1e675e9d6160",
+        "name": "contextmesh.context_inspection",
+        ...
+      }]
+    }]
+  }]
+}
+```
+
+The boundary is intentional: Langfuse keeps the trace, ContextMesh keeps
+the context-quality metadata. The same shape, attached to a different
+backend, is `contextmesh export-team` for internal dashboards.
+
+## Three adapters, all working off the same ledger
+
+- **Claude Code** parses `claude --output-format stream-json`. One row
+  per assistant turn, plus synthetic rows for distillable test output.
+- **Codex CLI** parses `codex exec --json` JSONL. Handles
+  `input_tokens - cached_input_tokens` correctly (the same OTel
+  convention that produces the Langfuse double-counting bug).
+- **Aider** parses `.aider.chat.history.md`. Real Aider 0.86+ output,
+  blockquoted `Tokens: …` summary and all.
+
+Each adapter is ~120–160 LoC. Adding a fourth (OpenCode, Cursor) is a
+~30-line `Adapter` ABC subclass plus a fixture.
+
+## Two real example apps
+
+`examples/enterprise_agentic/` — a support-risk agent that selects from
+contracts, SLAs, security policies, and escalation rules, with explicit
+candidate decisions.
+
+`examples/enterprise_rag_office/` — a RAG agent over Office-style docs,
+showing how candidate selection + audit catches stale or sensitive
+context before it reaches the model.
+
+Both are intentionally non-coding-agent demos: the candidate / diff /
+audit story generalizes to *any* context-using agent, not just code.
+
+## Honest status
+
+Alpha. One contributor. 119 tests across Python 3.10 / 3.11 / 3.12 in
+CI, ruff clean, MIT. No telemetry, no cloud account, no SaaS. Local
+SQLite, one CLI binary.
+
+What it isn't trying to be: LangSmith, Langfuse, Phoenix. Those are full
+LLM application observability suites and they win on production
+workflows, dashboards, alerting, evals. ContextMesh is narrow on
+purpose: *measure which context produced verified work, explain what
+should change, and hand the metadata to whichever trace platform you
+already run.*
 
 ## Where to start
 
@@ -138,12 +215,9 @@ pip install -e .
 contextmesh init
 contextmesh trace --task-id my-task --agent claude-code -- \
     claude -p "fix the failing test" --output-format stream-json --verbose
-contextmesh dashboard
+contextmesh inspect --task-id my-task
 ```
 
-Adding an agent is one module: the
-[`Adapter` ABC](https://github.com/Alivanroy/ContextMesh/blob/v0.3.0/contextmesh/adapters/base.py)
-is ~30 lines, the concrete adapters ~120–160. Issues and PRs welcome.
-
 Repo: [github.com/Alivanroy/ContextMesh](https://github.com/Alivanroy/ContextMesh).
-Tests pass on Python 3.10 / 3.11 / 3.12 in CI.
+Design doc: [docs/context_intelligence_v1.md](https://github.com/Alivanroy/ContextMesh/blob/v0.4.0/docs/context_intelligence_v1.md).
+Metric definition: [docs/metrics.md](https://github.com/Alivanroy/ContextMesh/blob/v0.4.0/docs/metrics.md).

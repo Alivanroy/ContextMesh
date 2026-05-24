@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "contextmesh"
-version = "0.3.0"
+version = "0.4.0"
 description = "The context optimization layer for AI coding agents."
 authors = ["Ali Korsi <ali.korsi@korit.org>"]
 license = "MIT"

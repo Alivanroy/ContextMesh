@@ -14,8 +14,8 @@ matters most:
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
-[![tests: 115](https://img.shields.io/badge/tests-115%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
-[![version: v0.3.0](https://img.shields.io/badge/version-v0.3.0-blue.svg)](https://github.com/Alivanroy/ContextMesh)
+[![tests: 119](https://img.shields.io/badge/tests-119%20passing-brightgreen.svg)](https://github.com/Alivanroy/ContextMesh/actions)
+[![version: v0.4.0](https://img.shields.io/badge/version-v0.4.0-blue.svg)](https://github.com/Alivanroy/ContextMesh)
 
 ---
 
