@@ -28,7 +28,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest pytest-cov ruff jsonschema
+          # jsonschema: used by v0.4 context-intelligence schema tests
+          # python-docx + openpyxl: used by examples/enterprise_rag_office,
+          #                         imported transitively by tests/test_enterprise_rag_office_example.py
+          pip install pytest pytest-cov ruff jsonschema python-docx openpyxl
 
       - name: Lint
         run: ruff check .

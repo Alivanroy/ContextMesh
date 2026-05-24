@@ -39,6 +39,9 @@ pytest = ">=7.4"
 pytest-cov = ">=4.0"
 ruff = ">=0.5"
 jsonschema = ">=4.0"
+# Pulled in by examples/enterprise_rag_office; tests import the example
+python-docx = ">=1.0"
+openpyxl = ">=3.1"
 
 [tool.poetry.scripts]
 contextmesh = "contextmesh.cli.main:run"
