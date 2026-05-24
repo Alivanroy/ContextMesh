@@ -8,9 +8,23 @@ modular — most pull requests touch a single subpackage.
 ```bash
 git clone https://github.com/Alivanroy/ContextMesh.git
 cd ContextMesh
-poetry install        # or: pip install -e . && pip install pytest pytest-cov ruff
+
+# Option A — poetry (gets all dev + example deps automatically):
+poetry install
+
+# Option B — pip (explicit, mirrors what CI runs):
+pip install -e .
+pip install pytest pytest-cov ruff jsonschema python-docx openpyxl
+
 pytest                # full test suite must pass
+ruff check .          # must be clean
 ```
+
+If you add a new test that imports a third-party module, also add it to
+`[tool.poetry.group.dev.dependencies]` in `pyproject.toml` **and** to the
+explicit `pip install` line in `.github/workflows/ci.yml`. CI uses pip,
+not poetry, so the two lists must stay in sync. v0.4.0 shipped with a
+red CI for two iterations because this rule was missed twice.
 
 State is stored under `.contextmesh/` per project. Tests pin
 `CONTEXTMESH_STATE_DIR` to a `tmp_path`, so they never touch the real DB.
