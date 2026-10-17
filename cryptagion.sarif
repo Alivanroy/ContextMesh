@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CRYPTAGION",
+          "informationUri": "https://cryptagion.io",
+          "version": "linehash-test",
+          "rules": [
+            {
+              "id": "cryptagion/md5",
+              "name": "QuantumVulnerable_md5",
+              "shortDescription": {
+                "text": "Quantum-risk cryptography: md5"
+              },
+              "fullDescription": {
+                "text": "Use of md5 flagged by CRYPTAGION post-quantum risk analysis."
+              },
+              "helpUri": "https://cryptagion.io",
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "cryptagion/md5",
+          "level": "error",
+          "message": {
+            "text": "md5 usage \u2014 quantum status: vulnerable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cryptagion_linehash_tmp.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "cryptagionFingerprint/v1": "2f29546eaf2d55fd537734a25552a088728c0d51d63d3c56e25306e901dab93f",
+            "primaryLocationLineHash": "b57ceabdaa4ad619:1"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "cryptagion-finding-id": "86fe6c99-559c-4cf7-8cdf-829129307f76"
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "startTimeUtc": "2026-10-17T19:24:56.021101+00:00",
+          "properties": {
+            "cryptagion:scan": {
+              "scan_type": "code",
+              "target": "/private/tmp/claude-501/-Users-alikorsi-Downloads-cryptagion-starter--claude-worktrees-gracious-hermann-056e8f/8ffe9132-50fd-4ee8-9047-bbd9a8e79ad5/scratchpad/cm",
+              "repository": null,
+              "commit_sha": null,
+              "started_at": "2026-10-17T19:24:56.021101Z",
+              "finished_at": "2026-10-17T19:24:56.116507Z",
+              "languages_requested": [
+                "python"
+              ],
+              "languages": [
+                {
+                  "language": "python",
+                  "executed": true,
+                  "files_attempted": 79,
+                  "files_scanned": 79,
+                  "findings": 6,
+                  "skipped": [],
+                  "failed": [],
+                  "error": null,
+                  "files_skipped": 0,
+                  "files_failed": 0,
+                  "status": "complete"
+                }
+              ],
+              "findings": 6,
+              "languages_executed": [
+                "python"
+              ],
+              "files_attempted": 79,
+              "files_scanned": 79,
+              "files_skipped": 0,
+              "files_failed": 0,
+              "status": "complete",
+              "reasons": []
+            }
+          },
+          "endTimeUtc": "2026-10-17T19:24:56.116507+00:00"
+        }
+      ]
+    }
+  ]
+}
