@@ -1,0 +1,177 @@
+# CRYPTAGION crypto gate — example GitHub Actions workflow (configuration example,
+# not a connector: it runs in the target repository's own CI).
+#
+# Copy into a target repository's .github/workflows/. It:
+#   1. scans the checkout for cryptography (the inventory lives in $RUNNER_TEMP, not in
+#      the repository);
+#   2. gates the build: exit 1 on a usage error, exit 2 when findings at/above
+#      CRYPTAGION_FAIL_ON exist *or the scan was incomplete* (a language that did not
+#      run, files skipped or failed): an incomplete scan never passes as clean;
+#   3. uploads SARIF to GitHub code scanning (native alerts on the pull request and in
+#      the Security tab). Paths are repository-relative (%SRCROOT%), each result carries
+#      the finding's stable fingerprint, and the run records the repository and commit;
+#   4. keeps the SARIF, a CycloneDX CBOM and the Markdown summary as build artifacts;
+#   5. optionally (repository variable CRYPTAGION_PR_COMMENT=true) keeps ONE summary
+#      comment on the pull request, updated in place on every run.
+# No duplicate issue tracking: findings live in code scanning (and in CRYPTAGION);
+# the workflow opens no issue.
+#
+# Prerequisites
+#   * A licence that includes `ci_gate`: repository secret CRYPTAGION_LICENSE_FILE (the
+#     .lic file's contents).
+#   * Access to the CRYPTAGION package. The repository is private: either a read-only
+#     token in the secret CRYPTAGION_GITHUB_TOKEN (fine-grained, Contents: read on
+#     Cryptagion-io/cryptagion), or a wheel from your internal package index / the
+#     offline bundle (set the variable CRYPTAGION_PACKAGE, e.g. "cryptagion==1.6.0"
+#     with UV_INDEX_URL pointing at your mirror).
+#   * Code scanning enabled (public repositories, or GitHub Advanced Security / Code
+#     Security on private ones). Without it the upload step fails; the gate still works.
+#
+# Self-hosted and restricted-network runners
+#   * Set `runs-on` to your runner labels. The runner needs Python 3.12+ (installed by
+#     setup-uv), git, and outbound access only to what you allow: GitHub (checkout,
+#     SARIF upload) and your package index. The scan itself makes no network call.
+#   * Air-gapped: install from the offline bundle's wheels
+#     (`uv tool install --no-index --find-links /opt/cryptagion/wheels cryptagion`) and
+#     skip the upload step (keep the SARIF artifact for later import).
+#   * GitHub Enterprise Server: the same workflow; the actions must be available on the
+#     instance (actions/checkout, astral-sh/setup-uv, github/codeql-action).
+#
+# Pull requests from forks get a read-only token and no secrets: the licence step, the
+# SARIF upload and the comment do not run for them (see the `if:` conditions).
+#
+# Kept outside this repository's own .github/workflows/ on purpose: here it would scan
+# the deliberately vulnerable demo/ targets and fail every run.
+name: Crypto Gate (CRYPTAGION)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write   # upload SARIF to code scanning
+  actions: read            # needed by upload-sarif on private repositories
+
+env:
+  CRYPTAGION_FAIL_ON: critical          # low | medium | high | critical
+  CRYPTAGION_CLASSIFICATION: confidential
+  CRYPTAGION_YEARS: "10"                # confidentiality window (harvest now, decrypt later)
+  CRYPTAGION_REF: v1.6.0                # the release you install (a tag, not a branch)
+
+jobs:
+  crypto-gate:
+    runs-on: ubuntu-latest              # or your self-hosted labels
+    # Forked pull requests have no secrets: nothing to gate with.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    outputs:
+      gate: ${{ steps.gate.outputs.status }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install CRYPTAGION
+        env:
+          GH_READ_TOKEN: ${{ secrets.CRYPTAGION_GITHUB_TOKEN }}
+          CRYPTAGION_PACKAGE: ${{ vars.CRYPTAGION_PACKAGE }}
+        # `uv tool install` uses an isolated venv (`pip install --system` is refused on
+        # current Ubuntu runners: externally managed Python). The token stays in an
+        # environment variable, never on the command line or in the logs.
+        run: |
+          if [ -n "$CRYPTAGION_PACKAGE" ]; then
+            uv tool install "$CRYPTAGION_PACKAGE"
+          else
+            git config --global url."https://x-access-token:${GH_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
+            uv tool install "git+https://github.com/Cryptagion-io/cryptagion.git@${CRYPTAGION_REF}"
+            git config --global --unset-all url."https://x-access-token:${GH_READ_TOKEN}@github.com/".insteadOf
+          fi
+          cryptagion --version
+
+      - name: Install the CRYPTAGION licence
+        env:
+          LICENCE: ${{ secrets.CRYPTAGION_LICENSE_FILE }}
+        run: |
+          printf '%s' "$LICENCE" > "$RUNNER_TEMP/cryptagion.lic"
+          echo "CRYPTAGION_LICENSE=$RUNNER_TEMP/cryptagion.lic" >> "$GITHUB_ENV"
+          echo "CRYPTAGION_DB=$RUNNER_TEMP/cryptagion.db" >> "$GITHUB_ENV"
+          cryptagion license verify "$RUNNER_TEMP/cryptagion.lic"
+
+      - name: Scan the repository for cryptography
+        run: cryptagion scan code --path . --exclude-tests --exclude-examples --reset
+
+      - name: Run the crypto gate (+ SARIF, summary)
+        id: gate
+        # The gate's exit code is kept for the last step, so the reports are written and
+        # uploaded first in every case (passed, failed or incomplete).
+        run: |
+          set +e
+          cryptagion gate \
+            --fail-on "$CRYPTAGION_FAIL_ON" \
+            --classification "$CRYPTAGION_CLASSIFICATION" --years "$CRYPTAGION_YEARS" \
+            --require-complete \
+            --sarif cryptagion.sarif --base-path . \
+            --summary cryptagion-summary.md \
+            --repository-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" --branch "$GITHUB_REF_NAME"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Export the CBOM
+        if: always()
+        run: |
+          cryptagion export cbom --output cryptagion.cbom.json \
+            --repo "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
+            --classification "$CRYPTAGION_CLASSIFICATION" --years "$CRYPTAGION_YEARS" || true
+
+      - name: Upload SARIF to GitHub code scanning
+        if: always() && hashFiles('cryptagion.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: cryptagion.sarif
+          category: cryptagion
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cryptagion-reports
+          if-no-files-found: ignore
+          retention-days: 30
+          path: |
+            cryptagion.sarif
+            cryptagion.cbom.json
+            cryptagion-summary.md
+
+      - name: Fail when the gate failed
+        if: steps.gate.outputs.status != '0'
+        run: |
+          echo "Crypto gate exit code ${{ steps.gate.outputs.status }} (2 = threshold breached or scan incomplete)."
+          exit 1
+
+  pr-summary:
+    # One summary comment per pull request, updated in place (opt-in).
+    needs: crypto-gate
+    if: always() && github.event_name == 'pull_request' && vars.CRYPTAGION_PR_COMMENT == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cryptagion-reports
+      - name: Create or update the summary comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          [ -f cryptagion-summary.md ] || { echo "No summary (empty inventory?)."; exit 0; }
+          marker='<!-- cryptagion-summary -->'
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+                 --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@cryptagion-summary.md >/dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@cryptagion-summary.md >/dev/null
+          fi
