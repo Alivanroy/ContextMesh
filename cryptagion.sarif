@@ -41,7 +41,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 9
+                  "startLine": 10
                 }
               }
             }
@@ -52,22 +52,22 @@
           },
           "properties": {
             "security-severity": "8.0",
-            "cryptagion-finding-id": "38507e61-bd8c-4e01-98d4-10481e448565"
+            "cryptagion-finding-id": "18d98552-eff1-45b8-9eed-9fbd77504946"
           }
         }
       ],
       "invocations": [
         {
           "executionSuccessful": true,
-          "startTimeUtc": "2026-10-17T19:25:50.741456+00:00",
+          "startTimeUtc": "2026-10-17T19:26:57.538883+00:00",
           "properties": {
             "cryptagion:scan": {
               "scan_type": "code",
               "target": "/private/tmp/claude-501/-Users-alikorsi-Downloads-cryptagion-starter--claude-worktrees-gracious-hermann-056e8f/8ffe9132-50fd-4ee8-9047-bbd9a8e79ad5/scratchpad/cm",
               "repository": null,
               "commit_sha": null,
-              "started_at": "2026-10-17T19:25:50.741456Z",
-              "finished_at": "2026-10-17T19:25:50.849310Z",
+              "started_at": "2026-10-17T19:26:57.538883Z",
+              "finished_at": "2026-10-17T19:26:57.655814Z",
               "languages_requested": [
                 "python"
               ],
@@ -98,7 +98,7 @@
               "reasons": []
             }
           },
-          "endTimeUtc": "2026-10-17T19:25:50.849310+00:00"
+          "endTimeUtc": "2026-10-17T19:26:57.655814+00:00"
         }
       ]
     }
