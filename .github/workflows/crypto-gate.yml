@@ -58,7 +58,7 @@ env:
   CRYPTAGION_FAIL_ON: critical          # low | medium | high | critical
   CRYPTAGION_CLASSIFICATION: confidential
   CRYPTAGION_YEARS: "10"                # confidentiality window (harvest now, decrypt later)
-  CRYPTAGION_REF: v1.6.0                # the release you install (a tag, not a branch)
+  CRYPTAGION_REF: 3ebdbaa44437f692b94cae37381fc9507ee22be8  # verification: fix/wheel-data-files
 
 jobs:
   crypto-gate:
